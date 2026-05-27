@@ -1,6 +1,7 @@
 import {
   collection, doc, getDocs, getDoc, addDoc,
-  updateDoc, deleteDoc, query, orderBy, serverTimestamp,
+  updateDoc, deleteDoc, query, orderBy, limit,
+  startAfter, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './config'
 
@@ -63,10 +64,32 @@ export const deletePeca = (id) => remove('pecas', id)
 
 // ── Orçamentos ────────────────────────────────────────────────────────────────
 
-export const getOrcamentos = async () => {
-  const q = query(collection(db, 'orcamentos'), orderBy('createdAt', 'desc'))
+// Busca a primeira página de orçamentos (carregamento inicial)
+export const getOrcamentos = async (pageSize = 50) => {
+  const q = query(
+    collection(db, 'orcamentos'),
+    orderBy('createdAt', 'desc'),
+    limit(pageSize),
+  )
   const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  return {
+    items:   snap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    lastDoc: snap.docs[snap.docs.length - 1] ?? null,
+    hasMore: snap.docs.length === pageSize,
+  }
+}
+
+// Carrega mais orçamentos a partir de um cursor (paginação Firestore)
+export const getOrcamentosPage = async (afterDoc, pageSize = 50) => {
+  const q = afterDoc
+    ? query(collection(db, 'orcamentos'), orderBy('createdAt', 'desc'), startAfter(afterDoc), limit(pageSize))
+    : query(collection(db, 'orcamentos'), orderBy('createdAt', 'desc'), limit(pageSize))
+  const snap = await getDocs(q)
+  return {
+    items:   snap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    lastDoc: snap.docs[snap.docs.length - 1] ?? null,
+    hasMore: snap.docs.length === pageSize,
+  }
 }
 
 export const getOrcamentoById = (id) => getById('orcamentos', id)
