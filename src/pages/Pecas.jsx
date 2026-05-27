@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Package, Plus, Edit, Trash2, Search } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useToast } from '../contexts/ToastContext'
+import { useLogger } from '../hooks/useLogger'
 import * as svc from '../firebase/services'
 import { formatCurrency } from '../utils/helpers'
 import Button from '../components/ui/Button'
@@ -13,12 +14,13 @@ import EmptyState from '../components/ui/EmptyState'
 const empty = () => ({ tipoPeca: '', valor: '' })
 
 export default function Pecas() {
-  const { pecas, refresh } = useApp()
+  const { pecas, addPeca, editPeca, dropPeca } = useApp()
   const toast = useToast()
-  const [search, setSearch] = useState('')
-  const [modal, setModal] = useState(null)
-  const [form, setForm] = useState(empty())
-  const [saving, setSaving] = useState(false)
+  const logger = useLogger()
+  const [search,   setSearch]   = useState('')
+  const [modal,    setModal]    = useState(null)
+  const [form,     setForm]     = useState(empty())
+  const [saving,   setSaving]   = useState(false)
   const [deleteId, setDeleteId] = useState(null)
 
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }))
@@ -28,19 +30,37 @@ export default function Pecas() {
   )
 
   const openCreate = () => { setForm(empty()); setModal('create') }
-  const openEdit = (p) => { setForm({ tipoPeca: p.tipoPeca ?? '', valor: String(p.valor ?? '') }); setModal(p.id) }
+  const openEdit   = (p) => { setForm({ tipoPeca: p.tipoPeca ?? '', valor: String(p.valor ?? '') }); setModal(p.id) }
 
   const handleSave = async () => {
     if (!form.tipoPeca) return
     setSaving(true)
     try {
       const data = { ...form, valor: Number(form.valor) || 0 }
-      if (modal === 'create') { await svc.createPeca(data); toast.success(`Peça "${form.tipoPeca}" cadastrada!`) }
-      else { await svc.updatePeca(modal, data); toast.success('Peça atualizada!') }
-      await refresh()
+      if (modal === 'create') {
+        const id = await svc.createPeca(data)
+        addPeca({ id, ...data })
+        logger.activity('peca_criada', `Peça "${form.tipoPeca}" cadastrada`)
+        toast.success(`Peça "${form.tipoPeca}" cadastrada!`)
+      } else {
+        await svc.updatePeca(modal, data)
+        editPeca(modal, data)
+        logger.activity('peca_editada', `Peça "${form.tipoPeca}" atualizada`)
+        toast.success('Peça atualizada!')
+      }
       setModal(null)
-    } catch { toast.error('Erro ao salvar peça.')
+    } catch (err) { logger.error('erro_ao_salvar', 'Erro ao salvar peça', { err: err?.message }); toast.error('Erro ao salvar peça.')
     } finally { setSaving(false) }
+  }
+
+  const handleDelete = async () => {
+    try {
+      const nome = pecas.find((p) => p.id === deleteId)?.tipoPeca ?? ''
+      await svc.deletePeca(deleteId)
+      dropPeca(deleteId)
+      logger.activity('peca_excluida', `Peça "${nome}" excluída`)
+      toast.success('Peça removida.')
+    } catch (err) { logger.error('erro_ao_excluir', 'Erro ao excluir peça', { err: err?.message }); toast.error('Erro ao remover peça.') }
   }
 
   return (
@@ -82,7 +102,7 @@ export default function Pecas() {
 
       <Modal open={!!modal} onClose={() => setModal(null)} title={modal === 'create' ? 'Nova Peça' : 'Editar Peça'}>
         <div className="flex flex-col gap-4">
-          <Input label="Tipo de Peça *" value={form.tipoPeca} onChange={set('tipoPeca')} placeholder="Ex: Filtro de óleo, Pastilha de freio..." />
+          <Input label="Tipo de Peça *" value={form.tipoPeca} onChange={set('tipoPeca')} placeholder="Ex: Filtro de óleo..." />
           <Input label="Valor (R$)" type="number" step="0.01" value={form.valor} onChange={set('valor')} placeholder="0,00" />
           <div className="flex gap-3 mt-2">
             <Button variant="secondary" className="flex-1 justify-center" onClick={() => setModal(null)}>Cancelar</Button>
@@ -91,7 +111,7 @@ export default function Pecas() {
         </div>
       </Modal>
 
-      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={async () => { try { await svc.deletePeca(deleteId); await refresh(); toast.success('Peça removida.') } catch { toast.error('Erro ao remover peça.') } }} title="Excluir peça?" danger />
+      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title="Excluir peça?" danger />
     </div>
   )
 }

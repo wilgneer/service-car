@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Users, Plus, Edit, Trash2, Phone, Search, FileText } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useToast } from '../contexts/ToastContext'
+import { useLogger } from '../hooks/useLogger'
 import * as svc from '../firebase/services'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
@@ -12,12 +13,13 @@ import EmptyState from '../components/ui/EmptyState'
 const empty = () => ({ nome: '', celular: '' })
 
 export default function Clientes() {
-  const { clientes, orcamentos, refresh } = useApp()
+  const { clientes, orcamentos, addCliente, editCliente, dropCliente } = useApp()
   const toast = useToast()
-  const [search, setSearch] = useState('')
-  const [modal, setModal] = useState(null)
-  const [form, setForm] = useState(empty())
-  const [saving, setSaving] = useState(false)
+  const logger = useLogger()
+  const [search,   setSearch]   = useState('')
+  const [modal,    setModal]    = useState(null)
+  const [form,     setForm]     = useState(empty())
+  const [saving,   setSaving]   = useState(false)
   const [deleteId, setDeleteId] = useState(null)
 
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }))
@@ -27,26 +29,36 @@ export default function Clientes() {
   )
 
   const openCreate = () => { setForm(empty()); setModal('create') }
-  const openEdit = (c) => { setForm({ nome: c.nome ?? '', celular: c.celular ?? '' }); setModal(c.id) }
+  const openEdit   = (c) => { setForm({ nome: c.nome ?? '', celular: c.celular ?? '' }); setModal(c.id) }
 
   const handleSave = async () => {
     if (!form.nome) return
     setSaving(true)
     try {
-      if (modal === 'create') { await svc.createCliente(form); toast.success(`Cliente "${form.nome}" cadastrado!`) }
-      else { await svc.updateCliente(modal, form); toast.success('Cliente atualizado!') }
-      await refresh()
+      if (modal === 'create') {
+        const id = await svc.createCliente(form)
+        addCliente({ id, ...form })
+        logger.activity('cliente_criado', `Cliente "${form.nome}" cadastrado`)
+        toast.success(`Cliente "${form.nome}" cadastrado!`)
+      } else {
+        await svc.updateCliente(modal, form)
+        editCliente(modal, form)
+        logger.activity('cliente_editado', `Cliente "${form.nome}" atualizado`)
+        toast.success('Cliente atualizado!')
+      }
       setModal(null)
-    } catch { toast.error('Erro ao salvar cliente.')
+    } catch (err) { logger.error('erro_ao_salvar', 'Erro ao salvar cliente', { err: err?.message }); toast.error('Erro ao salvar cliente.')
     } finally { setSaving(false) }
   }
 
   const handleDelete = async () => {
     try {
+      const nome = clientes.find((c) => c.id === deleteId)?.nome ?? ''
       await svc.deleteCliente(deleteId)
-      await refresh()
+      dropCliente(deleteId)
+      logger.activity('cliente_excluido', `Cliente "${nome}" excluído`)
       toast.success('Cliente removido.')
-    } catch { toast.error('Erro ao remover cliente.') }
+    } catch (err) { logger.error('erro_ao_excluir', 'Erro ao excluir cliente', { err: err?.message }); toast.error('Erro ao remover cliente.') }
   }
 
   const orcamentosCount = (id) => orcamentos.filter((o) => o.clienteId === id).length
@@ -77,22 +89,14 @@ export default function Clientes() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-brand-black truncate">{c.nome}</p>
-                {c.celular && (
-                  <div className="flex items-center gap-1 text-sm text-brand-gray-light">
-                    <Phone size={12} /> {c.celular}
-                  </div>
-                )}
+                {c.celular && <div className="flex items-center gap-1 text-sm text-brand-gray-light"><Phone size={12} /> {c.celular}</div>}
                 <div className="flex items-center gap-1 text-xs text-brand-gray-light mt-0.5">
                   <FileText size={11} /> {orcamentosCount(c.id)} orçamento(s)
                 </div>
               </div>
               <div className="flex gap-2 shrink-0">
-                <button onClick={() => openEdit(c)} className="p-2 rounded-lg hover:bg-brand-gray-border transition-colors text-brand-gray-light hover:text-brand-black">
-                  <Edit size={15} />
-                </button>
-                <button onClick={() => setDeleteId(c.id)} className="p-2 rounded-lg hover:bg-red-50 transition-colors text-brand-gray-light hover:text-red-600">
-                  <Trash2 size={15} />
-                </button>
+                <button onClick={() => openEdit(c)} className="p-2 rounded-lg hover:bg-brand-gray-border transition-colors text-brand-gray-light hover:text-brand-black"><Edit size={15} /></button>
+                <button onClick={() => setDeleteId(c.id)} className="p-2 rounded-lg hover:bg-red-50 transition-colors text-brand-gray-light hover:text-red-600"><Trash2 size={15} /></button>
               </div>
             </div>
           ))}

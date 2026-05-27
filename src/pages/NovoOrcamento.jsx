@@ -4,6 +4,7 @@ import { Plus, Trash2, ChevronLeft, UserPlus, Car as CarIcon, Info } from 'lucid
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
+import { useLogger } from '../hooks/useLogger'
 import * as svc from '../firebase/services'
 import { formatCurrency, calcTotals } from '../utils/helpers'
 import Button from '../components/ui/Button'
@@ -18,6 +19,7 @@ export default function NovoOrcamento() {
   const { clientes, carros, servicos, pecas, addOrcamento, addCliente, addCarro } = useApp()
   const { user } = useAuth()
   const toast = useToast()
+  const logger = useLogger()
 
   const [clienteId, setClienteId] = useState('')
   const [carroId, setCarroId] = useState('')
@@ -97,9 +99,11 @@ export default function NovoOrcamento() {
       }
       const newId = await svc.createOrcamento(payload)
       addOrcamento({ id: newId, ...payload, status: 'rascunho' })
+      logger.activity('orcamento_criado', `Orçamento criado para ${payload.clienteNome} — ${payload.veiculoModelo}`)
       toast.success('Orçamento criado com sucesso!')
       navigate('/')
     } catch (err) {
+      logger.error('erro_ao_salvar', 'Erro ao criar orçamento', { err: err?.message })
       toast.error('Erro ao salvar orçamento. Verifique os dados e tente novamente.')
     } finally {
       setLoading(false)
@@ -112,6 +116,7 @@ export default function NovoOrcamento() {
     try {
       const id = await svc.createCliente(newCliente)
       addCliente({ id, ...newCliente })
+      logger.activity('cliente_criado', `Cliente "${newCliente.nome}" cadastrado via orçamento`)
       setClienteId(id)
       setShowNovoCliente(false)
       setNewCliente({ nome: '', celular: '' })
@@ -128,6 +133,7 @@ export default function NovoOrcamento() {
       const carroData = { ...newCarro, clienteId: clienteId || null }
       const id = await svc.createCarro(carroData)
       addCarro({ id, ...carroData })
+      logger.activity('carro_criado', `Veículo "${newCarro.nome}" cadastrado via orçamento`)
       setCarroId(id)
       setShowNovoCarro(false)
       setNewCarro({ nome: '', marca: '', cor: '', ano: '', placa: '' })

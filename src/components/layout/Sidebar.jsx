@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   FileText, Users, Car, Wrench, Package,
   DollarSign, BarChart2, LogOut, ChevronLeft,
-  Menu, X, Shield,
+  Menu, X, Shield, ScrollText,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -15,6 +15,10 @@ const navItems = [
   { to: '/pecas', label: 'Peças', icon: Package },
   { to: '/financeiro', label: 'Financeiro', icon: DollarSign },
   { to: '/relatorios', label: 'Relatórios', icon: BarChart2 },
+]
+
+const adminItems = [
+  { to: '/logs', label: 'Logs', icon: ScrollText },
 ]
 
 export default function Sidebar() {
@@ -61,6 +65,17 @@ export default function Sidebar() {
             {label}
           </NavLink>
         ))}
+        {isAdmin && (
+          <>
+            <div className="my-2 border-t border-brand-gray-mid" />
+            {adminItems.map(({ to, label, icon: Icon }) => (
+              <NavLink key={to} to={to} className={linkClass} onClick={() => setOpen(false)}>
+                <Icon size={17} />
+                {label}
+              </NavLink>
+            ))}
+          </>
+        )}
       </nav>
 
       {/* Logout */}

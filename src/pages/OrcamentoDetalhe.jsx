@@ -4,6 +4,7 @@ import { ChevronLeft, Edit, Trash2, CheckCircle, XCircle, Printer, Car } from 'l
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
+import { useLogger } from '../hooks/useLogger'
 import * as svc from '../firebase/services'
 import { formatCurrency, formatDate, formatDatetime, statusLabel, statusClass, calcTotals } from '../utils/helpers'
 import Button from '../components/ui/Button'
@@ -15,6 +16,7 @@ export default function OrcamentoDetalhe() {
   const { orcamentos, clientes, carros, editOrcamento, dropOrcamento } = useApp()
   const { isAdmin } = useAuth()
   const toast = useToast()
+  const logger = useLogger()
 
   const [confirm, setConfirm] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -33,28 +35,32 @@ export default function OrcamentoDetalhe() {
   const canEdit = isAdmin || !isConcluido
   const t = calcTotals(orcamento.itens, orcamento.extras)
 
-  const changeStatus = async (status, extra, successMsg) => {
+  const changeStatus = async (status, extra, successMsg, logAction) => {
     setLoading(true)
     try {
       await svc.atualizarStatus(id, status, extra)
       editOrcamento(id, { status, ...extra })
+      logger.activity(logAction, `Orçamento #${String(orcamento.numero).padStart(4,'0')} ${successMsg?.toLowerCase() ?? status}`)
       if (successMsg) toast.success(successMsg)
-    } catch {
+    } catch (err) {
+      logger.error('erro_status', `Erro ao alterar status para ${status}`, { err: err?.message, orcamentoId: id })
       toast.error('Ocorreu um erro. Tente novamente.')
     } finally { setLoading(false) }
   }
 
-  const handleAprovar  = () => changeStatus('aprovado',  { aprovadoEm:  new Date().toISOString() }, 'Orçamento aprovado!')
-  const handleReprovar = () => changeStatus('reprovado', { reprovadoEm: new Date().toISOString() }, 'Orçamento reprovado.')
-  const handleConcluir = () => changeStatus('concluido', { concluidoEm: new Date().toISOString() }, 'Orçamento concluído!')
+  const handleAprovar  = () => changeStatus('aprovado',  { aprovadoEm:  new Date().toISOString() }, 'Orçamento aprovado!',   'orcamento_aprovado')
+  const handleReprovar = () => changeStatus('reprovado', { reprovadoEm: new Date().toISOString() }, 'Orçamento reprovado.',  'orcamento_reprovado')
+  const handleConcluir = () => changeStatus('concluido', { concluidoEm: new Date().toISOString() }, 'Orçamento concluído!',  'orcamento_concluido')
 
   const handleDelete = async () => {
     setLoading(true)
     try {
       await svc.remove('orcamentos', id)
       dropOrcamento(id)
+      logger.activity('orcamento_excluido', `Orçamento #${String(orcamento.numero).padStart(4,'0')} excluído`)
       navigate('/')
-    } catch {
+    } catch (err) {
+      logger.error('erro_ao_excluir', 'Erro ao excluir orçamento', { err: err?.message, orcamentoId: id })
       toast.error('Ocorreu um erro. Tente novamente.')
     } finally { setLoading(false) }
   }

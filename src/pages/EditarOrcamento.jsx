@@ -4,6 +4,7 @@ import { Plus, Trash2, ChevronLeft, Info } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
+import { useLogger } from '../hooks/useLogger'
 import * as svc from '../firebase/services'
 import { formatCurrency, calcTotals } from '../utils/helpers'
 import Button from '../components/ui/Button'
@@ -18,6 +19,7 @@ export default function EditarOrcamento() {
   const { orcamentos, clientes, carros, servicos, pecas, editOrcamento } = useApp()
   const { isAdmin } = useAuth()
   const toast = useToast()
+  const logger = useLogger()
 
   const orcamento = orcamentos.find((o) => o.id === id)
 
@@ -88,9 +90,11 @@ export default function EditarOrcamento() {
 
       await svc.updateOrcamento(id, payload)
       editOrcamento(id, payload)
+      logger.activity('orcamento_editado', `Orçamento #${String(orcamento.numero).padStart(4,'0')} editado`)
       toast.success('Orçamento atualizado!')
       navigate(`/orcamentos/${id}`)
-    } catch {
+    } catch (err) {
+      logger.error('erro_ao_salvar', 'Erro ao editar orçamento', { err: err?.message, orcamentoId: id })
       toast.error('Erro ao salvar orçamento.')
     } finally {
       setLoading(false)

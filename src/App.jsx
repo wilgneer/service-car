@@ -15,6 +15,7 @@ import Servicos from './pages/Servicos'
 import Pecas from './pages/Pecas'
 import Financeiro from './pages/Financeiro'
 import Relatorios from './pages/Relatorios'
+import Logs from './pages/Logs'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -54,6 +55,7 @@ function AppRoutes() {
       <Route path="/pecas" element={<PrivateRoute><Pecas /></PrivateRoute>} />
       <Route path="/financeiro" element={<PrivateRoute><Financeiro /></PrivateRoute>} />
       <Route path="/relatorios" element={<PrivateRoute><Relatorios /></PrivateRoute>} />
+      <Route path="/logs" element={<PrivateRoute><Logs /></PrivateRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

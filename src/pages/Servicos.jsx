@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Wrench, Plus, Edit, Trash2, Search } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useToast } from '../contexts/ToastContext'
+import { useLogger } from '../hooks/useLogger'
 import * as svc from '../firebase/services'
 import { formatCurrency } from '../utils/helpers'
 import Button from '../components/ui/Button'
@@ -13,12 +14,13 @@ import EmptyState from '../components/ui/EmptyState'
 const empty = () => ({ tipoServico: '', descricao: '', valor: '' })
 
 export default function Servicos() {
-  const { servicos, orcamentos, refresh } = useApp()
+  const { servicos, addServico, editServico, dropServico } = useApp()
   const toast = useToast()
-  const [search, setSearch] = useState('')
-  const [modal, setModal] = useState(null)
-  const [form, setForm] = useState(empty())
-  const [saving, setSaving] = useState(false)
+  const logger = useLogger()
+  const [search,   setSearch]   = useState('')
+  const [modal,    setModal]    = useState(null)
+  const [form,     setForm]     = useState(empty())
+  const [saving,   setSaving]   = useState(false)
   const [deleteId, setDeleteId] = useState(null)
 
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }))
@@ -29,23 +31,38 @@ export default function Servicos() {
   })
 
   const openCreate = () => { setForm(empty()); setModal('create') }
-  const openEdit = (s) => { setForm({ tipoServico: s.tipoServico ?? '', descricao: s.descricao ?? '', valor: String(s.valor ?? '') }); setModal(s.id) }
+  const openEdit   = (s) => { setForm({ tipoServico: s.tipoServico ?? '', descricao: s.descricao ?? '', valor: String(s.valor ?? '') }); setModal(s.id) }
 
   const handleSave = async () => {
     if (!form.tipoServico) return
     setSaving(true)
     try {
       const data = { ...form, valor: Number(form.valor) || 0 }
-      if (modal === 'create') { await svc.createServico(data); toast.success(`Serviço "${form.tipoServico}" cadastrado!`) }
-      else { await svc.updateServico(modal, data); toast.success('Serviço atualizado!') }
-      await refresh()
+      if (modal === 'create') {
+        const id = await svc.createServico(data)
+        addServico({ id, ...data })
+        logger.activity('servico_criado', `Serviço "${form.tipoServico}" cadastrado`)
+        toast.success(`Serviço "${form.tipoServico}" cadastrado!`)
+      } else {
+        await svc.updateServico(modal, data)
+        editServico(modal, data)
+        logger.activity('servico_editado', `Serviço "${form.tipoServico}" atualizado`)
+        toast.success('Serviço atualizado!')
+      }
       setModal(null)
-    } catch { toast.error('Erro ao salvar serviço.')
+    } catch (err) { logger.error('erro_ao_salvar', 'Erro ao salvar serviço', { err: err?.message }); toast.error('Erro ao salvar serviço.')
     } finally { setSaving(false) }
   }
 
-  const usageCount = (id) =>
-    orcamentos.filter((o) => o.itens?.servicos?.some((i) => i.servicoId === id)).length
+  const handleDelete = async () => {
+    try {
+      const nome = servicos.find((s) => s.id === deleteId)?.tipoServico ?? ''
+      await svc.deleteServico(deleteId)
+      dropServico(deleteId)
+      logger.activity('servico_excluido', `Serviço "${nome}" excluído`)
+      toast.success('Serviço removido.')
+    } catch (err) { logger.error('erro_ao_excluir', 'Erro ao excluir serviço', { err: err?.message }); toast.error('Erro ao remover serviço.') }
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -87,7 +104,7 @@ export default function Servicos() {
 
       <Modal open={!!modal} onClose={() => setModal(null)} title={modal === 'create' ? 'Novo Serviço' : 'Editar Serviço'}>
         <div className="flex flex-col gap-4">
-          <Input label="Tipo de Serviço *" value={form.tipoServico} onChange={set('tipoServico')} placeholder="Ex: Troca de óleo, Alinhamento..." />
+          <Input label="Tipo de Serviço *" value={form.tipoServico} onChange={set('tipoServico')} placeholder="Ex: Troca de óleo..." />
           <Textarea label="Descrição" value={form.descricao} onChange={set('descricao')} placeholder="Detalhes do serviço..." />
           <Input label="Valor (R$)" type="number" step="0.01" value={form.valor} onChange={set('valor')} placeholder="0,00" />
           <div className="flex gap-3 mt-2">
@@ -97,7 +114,7 @@ export default function Servicos() {
         </div>
       </Modal>
 
-      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={async () => { try { await svc.deleteServico(deleteId); await refresh(); toast.success('Serviço removido.') } catch { toast.error('Erro ao remover serviço.') } }} title="Excluir serviço?" danger />
+      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title="Excluir serviço?" danger />
     </div>
   )
 }
