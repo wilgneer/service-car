@@ -29,28 +29,44 @@ const DEMO_DATA = {
   orcamentos: [
     {
       id: 'o1', numero: 1, clienteId: 'c1', carroId: 'v1', status: 'faturado',
-      itens: { servicos: [{ descricao: 'Troca de Óleo', valor: 150, quantidade: 1 }], pecas: [{ descricao: 'Filtro de Óleo', valor: 45, quantidade: 1 }] },
-      totalServicos: 150, totalPecas: 45, totalGeral: 195,
+      extras: { markup: 20, rastreamento: 0 },
+      itens: {
+        servicos: [{ descricao: 'Troca de Óleo', valor: 150, quantidade: 1 }],
+        pecas: [{ marca: 'Bosch', descricao: 'Filtro de Óleo', valor: 45, quantidade: 1 }],
+      },
+      totalMaoDeObra: 150, totalPecasSemMarkup: 45, totalMarkup: 9, totalPecas: 54, rastreamento: 0, totalGeral: 204,
       createdAt: { toDate: () => new Date('2026-04-10') },
       faturadoEm: { toDate: () => new Date('2026-04-10') },
     },
     {
       id: 'o2', numero: 2, clienteId: 'c2', carroId: 'v2', status: 'pendente',
-      itens: { servicos: [{ descricao: 'Alinhamento', valor: 120, quantidade: 1 }, { descricao: 'Revisão Geral', valor: 350, quantidade: 1 }], pecas: [] },
-      totalServicos: 470, totalPecas: 0, totalGeral: 470,
+      extras: { markup: 20, rastreamento: 180 },
+      itens: {
+        servicos: [{ descricao: 'Alinhamento', valor: 120, quantidade: 1 }, { descricao: 'Revisão Geral', valor: 350, quantidade: 1 }],
+        pecas: [],
+      },
+      totalMaoDeObra: 470, totalPecasSemMarkup: 0, totalMarkup: 0, totalPecas: 0, rastreamento: 180, totalGeral: 650,
       createdAt: { toDate: () => new Date('2026-04-20') },
     },
     {
       id: 'o3', numero: 3, clienteId: 'c3', carroId: 'v3', status: 'cancelado',
-      itens: { servicos: [{ descricao: 'Revisão Geral', valor: 350, quantidade: 1 }], pecas: [{ descricao: 'Correia Dentada', valor: 280, quantidade: 1 }] },
-      totalServicos: 350, totalPecas: 280, totalGeral: 630,
+      extras: { markup: 20, rastreamento: 0 },
+      itens: {
+        servicos: [{ descricao: 'Revisão Geral', valor: 350, quantidade: 1 }],
+        pecas: [{ marca: 'Gates', descricao: 'Correia Dentada', valor: 280, quantidade: 1 }],
+      },
+      totalMaoDeObra: 350, totalPecasSemMarkup: 280, totalMarkup: 56, totalPecas: 336, rastreamento: 0, totalGeral: 686,
       createdAt: { toDate: () => new Date('2026-04-15') },
       canceladoEm: { toDate: () => new Date('2026-04-16') },
     },
     {
       id: 'o4', numero: 4, clienteId: 'c1', carroId: 'v1', status: 'pendente',
-      itens: { servicos: [{ descricao: 'Troca de Pastilha', valor: 180, quantidade: 1 }], pecas: [{ descricao: 'Pastilha de Freio', valor: 180, quantidade: 2 }] },
-      totalServicos: 180, totalPecas: 360, totalGeral: 540,
+      extras: { markup: 20, rastreamento: 0 },
+      itens: {
+        servicos: [{ descricao: 'Mão de Obra - Freios', valor: 180, quantidade: 1 }],
+        pecas: [{ marca: 'TRW', descricao: 'Pastilha de Freio', valor: 180, quantidade: 2 }],
+      },
+      totalMaoDeObra: 180, totalPecasSemMarkup: 360, totalMarkup: 72, totalPecas: 432, rastreamento: 0, totalGeral: 612,
       createdAt: { toDate: () => new Date('2026-04-25') },
     },
   ],

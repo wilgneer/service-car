@@ -29,7 +29,7 @@ export default function OrcamentoDetalhe() {
 
   const isFaturado = orcamento.status === 'faturado'
   const canEdit = isAdmin || !isFaturado
-  const { totalServicos, totalPecas, totalGeral } = calcTotals(orcamento.itens)
+  const t = calcTotals(orcamento.itens, orcamento.extras)
 
   const action = async (fn) => {
     setLoading(true)
@@ -110,46 +110,53 @@ export default function OrcamentoDetalhe() {
         </div>
       </div>
 
-      {/* Serviços */}
-      {orcamento.itens?.servicos?.length > 0 && (
-        <div className="card p-4">
-          <p className="text-xs text-brand-gray-light uppercase tracking-wide font-medium mb-3">Serviços</p>
-          <div className="flex flex-col divide-y divide-brand-gray-border">
-            {orcamento.itens.servicos.map((item, i) => (
-              <ItemLine key={i} item={item} />
-            ))}
-          </div>
-          <div className="flex justify-between text-sm font-medium mt-3 pt-3 border-t border-brand-gray-border">
-            <span className="text-brand-gray-light">Subtotal Serviços</span>
-            <span>{formatCurrency(totalServicos)}</span>
-          </div>
-        </div>
-      )}
-
       {/* Peças */}
       {orcamento.itens?.pecas?.length > 0 && (
         <div className="card p-4">
           <p className="text-xs text-brand-gray-light uppercase tracking-wide font-medium mb-3">Peças / Produtos</p>
           <div className="flex flex-col divide-y divide-brand-gray-border">
-            {orcamento.itens.pecas.map((item, i) => (
-              <ItemLine key={i} item={item} />
-            ))}
+            {orcamento.itens.pecas.map((item, i) => <PecaLine key={i} item={item} />)}
           </div>
-          <div className="flex justify-between text-sm font-medium mt-3 pt-3 border-t border-brand-gray-border">
-            <span className="text-brand-gray-light">Subtotal Peças</span>
-            <span>{formatCurrency(totalPecas)}</span>
+          <div className="mt-3 pt-3 border-t border-brand-gray-border flex flex-col gap-1">
+            <div className="flex justify-between text-xs text-brand-gray-light">
+              <span>Custo das peças</span><span>{formatCurrency(t.totalPecasSemMarkup)}</span>
+            </div>
+            <div className="flex justify-between text-xs text-brand-gray-light">
+              <span>Markup {orcamento.extras?.markup ?? 20}%</span><span>+ {formatCurrency(t.totalMarkup)}</span>
+            </div>
+            <div className="flex justify-between text-sm font-semibold text-brand-black">
+              <span>Total peças</span><span>{formatCurrency(t.totalPecas)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mão de Obra */}
+      {orcamento.itens?.servicos?.length > 0 && (
+        <div className="card p-4">
+          <p className="text-xs text-brand-gray-light uppercase tracking-wide font-medium mb-3">Mão de Obra</p>
+          <div className="flex flex-col divide-y divide-brand-gray-border">
+            {orcamento.itens.servicos.map((item, i) => <ItemLine key={i} item={item} />)}
+          </div>
+          <div className="flex justify-between text-sm font-semibold text-brand-black mt-3 pt-3 border-t border-brand-gray-border">
+            <span>Total mão de obra</span><span>{formatCurrency(t.totalMaoDeObra)}</span>
           </div>
         </div>
       )}
 
       {/* Total */}
-      <div className="card p-4">
-        <div className="flex items-center justify-between">
+      <div className="card p-4 flex flex-col gap-2">
+        {t.rastreamento > 0 && (
+          <div className="flex justify-between text-sm text-brand-gray-light">
+            <span>Rastreamento</span><span>{formatCurrency(t.rastreamento)}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between border-t border-brand-gray-border pt-2">
           <p className="font-semibold text-brand-black">Total Geral</p>
-          <p className="text-2xl font-bold text-brand-black">{formatCurrency(totalGeral)}</p>
+          <p className="text-2xl font-bold text-brand-black">{formatCurrency(t.totalGeral)}</p>
         </div>
         {isFaturado && orcamento.faturadoEm && (
-          <p className="text-xs text-green-600 mt-1">Faturado em {formatDatetime(orcamento.faturadoEm)}</p>
+          <p className="text-xs text-green-600">Faturado em {formatDatetime(orcamento.faturadoEm)}</p>
         )}
       </div>
 
@@ -191,6 +198,21 @@ function ItemLine({ item }) {
         {qty > 1 && <p className="text-xs text-brand-gray-light">{qty}x {formatCurrency(item.valor)}</p>}
       </div>
       <p className="text-sm font-medium text-brand-black whitespace-nowrap">{formatCurrency(total)}</p>
+    </div>
+  )
+}
+
+function PecaLine({ item }) {
+  const qty = Number(item.quantidade) || 1
+  const custo = (Number(item.valor) || 0) * qty
+  return (
+    <div className="flex items-center justify-between py-2.5 gap-2">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-brand-black truncate">{item.descricao || '-'}</p>
+        {item.marca && <p className="text-xs text-brand-gray-light">{item.marca}</p>}
+        {qty > 1 && <p className="text-xs text-brand-gray-light">{qty}x {formatCurrency(item.valor)}</p>}
+      </div>
+      <p className="text-sm font-medium text-brand-black whitespace-nowrap">{formatCurrency(custo)}</p>
     </div>
   )
 }

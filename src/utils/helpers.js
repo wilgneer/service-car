@@ -28,8 +28,24 @@ export const statusClass = (status) => ({
   cancelado: 'badge-cancelled',
 }[status] ?? 'badge-pending')
 
-export const calcTotals = (itens = {}) => {
-  const totalServicos = (itens.servicos ?? []).reduce((s, i) => s + (Number(i.valor) * Number(i.quantidade || 1)), 0)
-  const totalPecas = (itens.pecas ?? []).reduce((s, i) => s + (Number(i.valor) * Number(i.quantidade || 1)), 0)
-  return { totalServicos, totalPecas, totalGeral: totalServicos + totalPecas }
+export const calcTotals = (itens = {}, extras = {}) => {
+  const totalMaoDeObra = (itens.servicos ?? []).reduce((s, i) => s + (Number(i.valor) * Number(i.quantidade || 1)), 0)
+
+  const totalPecasSemMarkup = (itens.pecas ?? []).reduce((s, i) => s + (Number(i.valor) * Number(i.quantidade || 1)), 0)
+  const markup = Number(extras.markup ?? 20) / 100
+  const totalMarkup = totalPecasSemMarkup * markup
+  const totalPecas = totalPecasSemMarkup + totalMarkup
+
+  const rastreamento = Number(extras.rastreamento ?? 0)
+
+  const totalGeral = totalMaoDeObra + totalPecas + rastreamento
+
+  return {
+    totalMaoDeObra,
+    totalPecasSemMarkup,
+    totalMarkup,
+    totalPecas,
+    rastreamento,
+    totalGeral,
+  }
 }
