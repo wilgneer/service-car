@@ -1,30 +1,30 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { AppProvider } from './contexts/AppContext'
 import { ToastProvider } from './contexts/ToastContext'
 import Layout from './components/layout/Layout'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import NovoOrcamento from './pages/NovoOrcamento'
-import OrcamentoDetalhe from './pages/OrcamentoDetalhe'
-import EditarOrcamento from './pages/EditarOrcamento'
-import Clientes from './pages/Clientes'
-import Carros from './pages/Carros'
-import Servicos from './pages/Servicos'
-import Pecas from './pages/Pecas'
-import Financeiro from './pages/Financeiro'
-import Relatorios from './pages/Relatorios'
-import Logs from './pages/Logs'
 
-function PrivateRoute({ children }) {
-  const { user, loading } = useAuth()
-  if (loading) return <LoadingScreen />
-  if (!user) return <Navigate to="/login" replace />
+// ── Lazy loading — cada página só carrega quando acessada ─────────────────────
+const Login           = lazy(() => import('./pages/Login'))
+const Dashboard       = lazy(() => import('./pages/Dashboard'))
+const NovoOrcamento   = lazy(() => import('./pages/NovoOrcamento'))
+const OrcamentoDetalhe = lazy(() => import('./pages/OrcamentoDetalhe'))
+const EditarOrcamento = lazy(() => import('./pages/EditarOrcamento'))
+const Clientes        = lazy(() => import('./pages/Clientes'))
+const Carros          = lazy(() => import('./pages/Carros'))
+const Servicos        = lazy(() => import('./pages/Servicos'))
+const Pecas           = lazy(() => import('./pages/Pecas'))
+const Financeiro      = lazy(() => import('./pages/Financeiro'))
+const Relatorios      = lazy(() => import('./pages/Relatorios'))
+const Logs            = lazy(() => import('./pages/Logs'))
+
+// ── Loading inline (dentro do layout, não substitui a tela toda) ──────────────
+function PageLoader() {
   return (
-    <AppProvider>
-      <Layout>{children}</Layout>
-    </AppProvider>
+    <div className="flex items-center justify-center h-48">
+      <div className="w-8 h-8 border-4 border-brand-yellow border-t-transparent rounded-full animate-spin" />
+    </div>
   )
 }
 
@@ -39,24 +39,43 @@ function LoadingScreen() {
   )
 }
 
+function PrivateRoute({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) return <LoadingScreen />
+  if (!user) return <Navigate to="/login" replace />
+  return (
+    <AppProvider>
+      <Layout>
+        <Suspense fallback={<PageLoader />}>
+          {children}
+        </Suspense>
+      </Layout>
+    </AppProvider>
+  )
+}
+
 function AppRoutes() {
   const { user, loading } = useAuth()
   if (loading) return <LoadingScreen />
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-      <Route path="/orcamentos/novo" element={<PrivateRoute><NovoOrcamento /></PrivateRoute>} />
-      <Route path="/orcamentos/:id" element={<PrivateRoute><OrcamentoDetalhe /></PrivateRoute>} />
-      <Route path="/orcamentos/:id/editar" element={<PrivateRoute><EditarOrcamento /></PrivateRoute>} />
-      <Route path="/clientes" element={<PrivateRoute><Clientes /></PrivateRoute>} />
-      <Route path="/carros" element={<PrivateRoute><Carros /></PrivateRoute>} />
-      <Route path="/servicos" element={<PrivateRoute><Servicos /></PrivateRoute>} />
-      <Route path="/pecas" element={<PrivateRoute><Pecas /></PrivateRoute>} />
-      <Route path="/financeiro" element={<PrivateRoute><Financeiro /></PrivateRoute>} />
-      <Route path="/relatorios" element={<PrivateRoute><Relatorios /></PrivateRoute>} />
-      <Route path="/logs" element={<PrivateRoute><Logs /></PrivateRoute>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/login" element={
+        <Suspense fallback={<LoadingScreen />}>
+          {user ? <Navigate to="/" replace /> : <Login />}
+        </Suspense>
+      } />
+      <Route path="/"                        element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+      <Route path="/orcamentos/novo"         element={<PrivateRoute><NovoOrcamento /></PrivateRoute>} />
+      <Route path="/orcamentos/:id"          element={<PrivateRoute><OrcamentoDetalhe /></PrivateRoute>} />
+      <Route path="/orcamentos/:id/editar"   element={<PrivateRoute><EditarOrcamento /></PrivateRoute>} />
+      <Route path="/clientes"                element={<PrivateRoute><Clientes /></PrivateRoute>} />
+      <Route path="/carros"                  element={<PrivateRoute><Carros /></PrivateRoute>} />
+      <Route path="/servicos"                element={<PrivateRoute><Servicos /></PrivateRoute>} />
+      <Route path="/pecas"                   element={<PrivateRoute><Pecas /></PrivateRoute>} />
+      <Route path="/financeiro"              element={<PrivateRoute><Financeiro /></PrivateRoute>} />
+      <Route path="/relatorios"              element={<PrivateRoute><Relatorios /></PrivateRoute>} />
+      <Route path="/logs"                    element={<PrivateRoute><Logs /></PrivateRoute>} />
+      <Route path="*"                        element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

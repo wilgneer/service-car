@@ -46,15 +46,16 @@ export function AuthProvider({ children }) {
       setLoading(false)
       return
     }
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser)
-        await fetchProfile(firebaseUser.uid)
+        setLoading(false)          // ← libera a app IMEDIATAMENTE
+        fetchProfile(firebaseUser.uid) // ← perfil carrega em background (sem await)
       } else {
         setUser(null)
         setProfile(null)
+        setLoading(false)
       }
-      setLoading(false)
     })
     return unsub
   }, [])
