@@ -5,11 +5,13 @@ import InactivityWarning from '../ui/InactivityWarning'
 import { useInactivityTimeout } from '../../hooks/useInactivityTimeout'
 import { useAuth } from '../../contexts/AuthContext'
 import { useApp } from '../../contexts/AppContext'
+import { useToast } from '../../contexts/ToastContext'
 
 export default function Layout({ children }) {
   const { logout, isDemo } = useAuth()
   const { refresh } = useApp()
   const navigate = useNavigate()
+  const toast = useToast()
   const [showWarning, setShowWarning] = useState(false)
 
   const handleLogout = useCallback(async () => {
@@ -20,7 +22,9 @@ export default function Layout({ children }) {
 
   const handleWarning     = useCallback(() => setShowWarning(true),  [])
   const handleCancelWarn  = useCallback(() => setShowWarning(false), [])
-  const handleRefresh     = useCallback(() => { if (!isDemo) refresh() }, [refresh, isDemo])
+  const handleRefresh = useCallback(() => {
+    if (!isDemo) { refresh(); toast.info('Dados atualizados.', 2000) }
+  }, [refresh, isDemo, toast])
 
   useInactivityTimeout({
     onLogout:        handleLogout,

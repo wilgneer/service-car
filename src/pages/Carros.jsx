@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Car, Plus, Edit, Trash2, Search } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
+import { useToast } from '../contexts/ToastContext'
 import * as svc from '../firebase/services'
 import Button from '../components/ui/Button'
 import Input, { Select } from '../components/ui/Input'
@@ -12,6 +13,7 @@ const empty = () => ({ nome: '', marca: '', cor: '', ano: '', placa: '', cliente
 
 export default function Carros() {
   const { carros, clientes, refresh } = useApp()
+  const toast = useToast()
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(empty())
@@ -32,10 +34,11 @@ export default function Carros() {
     if (!form.nome) return
     setSaving(true)
     try {
-      if (modal === 'create') await svc.createCarro(form)
-      else await svc.updateCarro(modal, form)
+      if (modal === 'create') { await svc.createCarro(form); toast.success(`Veículo "${form.nome}" cadastrado!`) }
+      else { await svc.updateCarro(modal, form); toast.success('Veículo atualizado!') }
       await refresh()
       setModal(null)
+    } catch { toast.error('Erro ao salvar veículo.')
     } finally { setSaving(false) }
   }
 
@@ -107,7 +110,7 @@ export default function Carros() {
         </div>
       </Modal>
 
-      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={async () => { await svc.deleteCarro(deleteId); await refresh() }} title="Excluir veículo?" danger />
+      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={async () => { try { await svc.deleteCarro(deleteId); await refresh(); toast.success('Veículo removido.') } catch { toast.error('Erro ao remover veículo.') } }} title="Excluir veículo?" danger />
     </div>
   )
 }

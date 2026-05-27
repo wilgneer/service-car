@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Wrench, Plus, Edit, Trash2, Search } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
+import { useToast } from '../contexts/ToastContext'
 import * as svc from '../firebase/services'
 import { formatCurrency } from '../utils/helpers'
 import Button from '../components/ui/Button'
@@ -13,6 +14,7 @@ const empty = () => ({ tipoServico: '', descricao: '', valor: '' })
 
 export default function Servicos() {
   const { servicos, orcamentos, refresh } = useApp()
+  const toast = useToast()
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(empty())
@@ -34,10 +36,11 @@ export default function Servicos() {
     setSaving(true)
     try {
       const data = { ...form, valor: Number(form.valor) || 0 }
-      if (modal === 'create') await svc.createServico(data)
-      else await svc.updateServico(modal, data)
+      if (modal === 'create') { await svc.createServico(data); toast.success(`Serviço "${form.tipoServico}" cadastrado!`) }
+      else { await svc.updateServico(modal, data); toast.success('Serviço atualizado!') }
       await refresh()
       setModal(null)
+    } catch { toast.error('Erro ao salvar serviço.')
     } finally { setSaving(false) }
   }
 
@@ -94,7 +97,7 @@ export default function Servicos() {
         </div>
       </Modal>
 
-      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={async () => { await svc.deleteServico(deleteId); await refresh() }} title="Excluir serviço?" danger />
+      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={async () => { try { await svc.deleteServico(deleteId); await refresh(); toast.success('Serviço removido.') } catch { toast.error('Erro ao remover serviço.') } }} title="Excluir serviço?" danger />
     </div>
   )
 }

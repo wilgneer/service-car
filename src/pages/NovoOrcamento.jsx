@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, Trash2, ChevronLeft, UserPlus, Car as CarIcon, Info } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
 import * as svc from '../firebase/services'
 import { formatCurrency, calcTotals } from '../utils/helpers'
 import Button from '../components/ui/Button'
@@ -16,6 +17,7 @@ export default function NovoOrcamento() {
   const navigate = useNavigate()
   const { clientes, carros, servicos, pecas, refresh } = useApp()
   const { user } = useAuth()
+  const toast = useToast()
 
   const [clienteId, setClienteId] = useState('')
   const [carroId, setCarroId] = useState('')
@@ -76,6 +78,7 @@ export default function NovoOrcamento() {
       const cliente = clientes.find((c) => c.id === clienteId)
       const carro   = carros.find((c) => c.id === carroId)
 
+      toast.success('Orçamento criado com sucesso!')
       await svc.createOrcamento({
         clienteId,
         carroId,
@@ -96,6 +99,8 @@ export default function NovoOrcamento() {
       })
       await refresh()
       navigate('/')
+    } catch (err) {
+      toast.error('Erro ao salvar orçamento. Verifique os dados e tente novamente.')
     } finally {
       setLoading(false)
     }
@@ -110,6 +115,9 @@ export default function NovoOrcamento() {
       setClienteId(id)
       setShowNovoCliente(false)
       setNewCliente({ nome: '', celular: '' })
+      toast.success(`Cliente "${newCliente.nome}" cadastrado!`)
+    } catch {
+      toast.error('Erro ao cadastrar cliente.')
     } finally { setSavingModal(false) }
   }
 
@@ -122,6 +130,9 @@ export default function NovoOrcamento() {
       setCarroId(id)
       setShowNovoCarro(false)
       setNewCarro({ nome: '', marca: '', cor: '', ano: '', placa: '' })
+      toast.success(`Veículo "${newCarro.nome}" cadastrado!`)
+    } catch {
+      toast.error('Erro ao cadastrar veículo.')
     } finally { setSavingModal(false) }
   }
 

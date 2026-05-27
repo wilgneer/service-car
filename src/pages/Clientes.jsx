@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Users, Plus, Edit, Trash2, Phone, Search, FileText } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
+import { useToast } from '../contexts/ToastContext'
 import * as svc from '../firebase/services'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
@@ -12,6 +13,7 @@ const empty = () => ({ nome: '', celular: '' })
 
 export default function Clientes() {
   const { clientes, orcamentos, refresh } = useApp()
+  const toast = useToast()
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(empty())
@@ -31,16 +33,20 @@ export default function Clientes() {
     if (!form.nome) return
     setSaving(true)
     try {
-      if (modal === 'create') await svc.createCliente(form)
-      else await svc.updateCliente(modal, form)
+      if (modal === 'create') { await svc.createCliente(form); toast.success(`Cliente "${form.nome}" cadastrado!`) }
+      else { await svc.updateCliente(modal, form); toast.success('Cliente atualizado!') }
       await refresh()
       setModal(null)
+    } catch { toast.error('Erro ao salvar cliente.')
     } finally { setSaving(false) }
   }
 
   const handleDelete = async () => {
-    await svc.deleteCliente(deleteId)
-    await refresh()
+    try {
+      await svc.deleteCliente(deleteId)
+      await refresh()
+      toast.success('Cliente removido.')
+    } catch { toast.error('Erro ao remover cliente.') }
   }
 
   const orcamentosCount = (id) => orcamentos.filter((o) => o.clienteId === id).length

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronLeft, Edit, Trash2, CheckCircle, XCircle, Printer, Car } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
 import * as svc from '../firebase/services'
 import { formatCurrency, formatDate, formatDatetime, statusLabel, statusClass, calcTotals } from '../utils/helpers'
 import Button from '../components/ui/Button'
@@ -13,6 +14,7 @@ export default function OrcamentoDetalhe() {
   const navigate = useNavigate()
   const { orcamentos, clientes, carros, refresh } = useApp()
   const { isAdmin } = useAuth()
+  const toast = useToast()
 
   const [confirm, setConfirm] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -31,16 +33,21 @@ export default function OrcamentoDetalhe() {
   const canEdit = isAdmin || !isConcluido
   const t = calcTotals(orcamento.itens, orcamento.extras)
 
-  const action = async (fn) => {
+  const action = async (fn, successMsg) => {
     setLoading(true)
-    try { await fn(); await refresh() }
-    finally { setLoading(false) }
+    try {
+      await fn()
+      await refresh()
+      if (successMsg) toast.success(successMsg)
+    } catch {
+      toast.error('Ocorreu um erro. Tente novamente.')
+    } finally { setLoading(false) }
   }
 
-  const handleAprovar  = () => action(() => svc.atualizarStatus(id, 'aprovado',  { aprovadoEm: new Date().toISOString() }))
-  const handleReprovar = () => action(() => svc.atualizarStatus(id, 'reprovado', { reprovadoEm: new Date().toISOString() }))
-  const handleConcluir = () => action(() => svc.atualizarStatus(id, 'concluido', { concluidoEm: new Date().toISOString() }))
-  const handleDelete   = () => action(async () => { await svc.remove('orcamentos', id); navigate('/') })
+  const handleAprovar  = () => action(() => svc.atualizarStatus(id, 'aprovado',  { aprovadoEm: new Date().toISOString() }), 'Orçamento aprovado!')
+  const handleReprovar = () => action(() => svc.atualizarStatus(id, 'reprovado', { reprovadoEm: new Date().toISOString() }), 'Orçamento reprovado.')
+  const handleConcluir = () => action(() => svc.atualizarStatus(id, 'concluido', { concluidoEm: new Date().toISOString() }), 'Orçamento concluído!')
+  const handleDelete   = () => action(async () => { await svc.remove('orcamentos', id); navigate('/') }, null)
 
   return (
     <div className="flex flex-col gap-5 max-w-2xl">

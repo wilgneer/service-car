@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Package, Plus, Edit, Trash2, Search } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
+import { useToast } from '../contexts/ToastContext'
 import * as svc from '../firebase/services'
 import { formatCurrency } from '../utils/helpers'
 import Button from '../components/ui/Button'
@@ -13,6 +14,7 @@ const empty = () => ({ tipoPeca: '', valor: '' })
 
 export default function Pecas() {
   const { pecas, refresh } = useApp()
+  const toast = useToast()
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(empty())
@@ -33,10 +35,11 @@ export default function Pecas() {
     setSaving(true)
     try {
       const data = { ...form, valor: Number(form.valor) || 0 }
-      if (modal === 'create') await svc.createPeca(data)
-      else await svc.updatePeca(modal, data)
+      if (modal === 'create') { await svc.createPeca(data); toast.success(`Peça "${form.tipoPeca}" cadastrada!`) }
+      else { await svc.updatePeca(modal, data); toast.success('Peça atualizada!') }
       await refresh()
       setModal(null)
+    } catch { toast.error('Erro ao salvar peça.')
     } finally { setSaving(false) }
   }
 
@@ -88,7 +91,7 @@ export default function Pecas() {
         </div>
       </Modal>
 
-      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={async () => { await svc.deletePeca(deleteId); await refresh() }} title="Excluir peça?" danger />
+      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={async () => { try { await svc.deletePeca(deleteId); await refresh(); toast.success('Peça removida.') } catch { toast.error('Erro ao remover peça.') } }} title="Excluir peça?" danger />
     </div>
   )
 }
