@@ -4,12 +4,12 @@ import { getFirestore } from 'firebase/firestore'
 
 // Substitua com as credenciais do seu projeto Firebase
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyDNrje5Rcey1ch1YILJJfgBPLU-1eGkdzU",
+  authDomain: "autocenterfloresta-94820.firebaseapp.com",
+  projectId: "autocenterfloresta-94820",
+  storageBucket: "autocenterfloresta-94820.firebasestorage.app",
+  messagingSenderId: "459201768370",
+  appId: "1:459201768370:web:6e11ae1cb5d28882ef52ab",
 }
 
 const app = initializeApp(firebaseConfig)
