@@ -1,0 +1,12 @@
+.claude/
+node_modules/
+dist/
+.env
+.env.local
+.env.production
+*.env
+.vercel/
+coverage/
+*.log
+.DS_Store
+Thumbs.db
