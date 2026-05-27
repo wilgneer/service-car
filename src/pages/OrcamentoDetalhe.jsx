@@ -12,7 +12,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 export default function OrcamentoDetalhe() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { orcamentos, clientes, carros, refresh } = useApp()
+  const { orcamentos, clientes, carros, editOrcamento, dropOrcamento } = useApp()
   const { isAdmin } = useAuth()
   const toast = useToast()
 
@@ -33,21 +33,31 @@ export default function OrcamentoDetalhe() {
   const canEdit = isAdmin || !isConcluido
   const t = calcTotals(orcamento.itens, orcamento.extras)
 
-  const action = async (fn, successMsg) => {
+  const changeStatus = async (status, extra, successMsg) => {
     setLoading(true)
     try {
-      await fn()
-      await refresh()
+      await svc.atualizarStatus(id, status, extra)
+      editOrcamento(id, { status, ...extra })
       if (successMsg) toast.success(successMsg)
     } catch {
       toast.error('Ocorreu um erro. Tente novamente.')
     } finally { setLoading(false) }
   }
 
-  const handleAprovar  = () => action(() => svc.atualizarStatus(id, 'aprovado',  { aprovadoEm: new Date().toISOString() }), 'Orçamento aprovado!')
-  const handleReprovar = () => action(() => svc.atualizarStatus(id, 'reprovado', { reprovadoEm: new Date().toISOString() }), 'Orçamento reprovado.')
-  const handleConcluir = () => action(() => svc.atualizarStatus(id, 'concluido', { concluidoEm: new Date().toISOString() }), 'Orçamento concluído!')
-  const handleDelete   = () => action(async () => { await svc.remove('orcamentos', id); navigate('/') }, null)
+  const handleAprovar  = () => changeStatus('aprovado',  { aprovadoEm:  new Date().toISOString() }, 'Orçamento aprovado!')
+  const handleReprovar = () => changeStatus('reprovado', { reprovadoEm: new Date().toISOString() }, 'Orçamento reprovado.')
+  const handleConcluir = () => changeStatus('concluido', { concluidoEm: new Date().toISOString() }, 'Orçamento concluído!')
+
+  const handleDelete = async () => {
+    setLoading(true)
+    try {
+      await svc.remove('orcamentos', id)
+      dropOrcamento(id)
+      navigate('/')
+    } catch {
+      toast.error('Ocorreu um erro. Tente novamente.')
+    } finally { setLoading(false) }
+  }
 
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
@@ -168,8 +178,8 @@ export default function OrcamentoDetalhe() {
           <p className="font-semibold text-brand-black">Total Geral</p>
           <p className="text-2xl font-bold text-brand-black">{formatCurrency(t.totalGeral)}</p>
         </div>
-        {isFaturado && orcamento.faturadoEm && (
-          <p className="text-xs text-green-600">Faturado em {formatDatetime(orcamento.faturadoEm)}</p>
+        {isConcluido && orcamento.concluidoEm && (
+          <p className="text-xs text-green-600">Concluído em {formatDatetime(orcamento.concluidoEm)}</p>
         )}
       </div>
 

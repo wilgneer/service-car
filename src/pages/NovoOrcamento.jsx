@@ -15,7 +15,7 @@ const emptyServico = () => ({ descricao: '', valor: '', quantidade: 1 })
 
 export default function NovoOrcamento() {
   const navigate = useNavigate()
-  const { clientes, carros, servicos, pecas, refresh } = useApp()
+  const { clientes, carros, servicos, pecas, addOrcamento, addCliente, addCarro } = useApp()
   const { user } = useAuth()
   const toast = useToast()
 
@@ -78,13 +78,11 @@ export default function NovoOrcamento() {
       const cliente = clientes.find((c) => c.id === clienteId)
       const carro   = carros.find((c) => c.id === carroId)
 
-      toast.success('Orçamento criado com sucesso!')
-      await svc.createOrcamento({
+      const payload = {
         clienteId,
         carroId,
         itens,
         extras,
-        // Campos obrigatórios pelas rules
         clienteNome:   cliente?.nome   ?? '',
         veiculoModelo: carro?.nome     ?? '',
         veiculoPlaca:  carro?.placa    ?? '',
@@ -96,8 +94,10 @@ export default function NovoOrcamento() {
         totalPecas:          t.totalPecas,
         rastreamento:        t.rastreamento,
         totalGeral:          t.totalGeral,
-      })
-      await refresh()
+      }
+      const newId = await svc.createOrcamento(payload)
+      addOrcamento({ id: newId, ...payload, status: 'rascunho' })
+      toast.success('Orçamento criado com sucesso!')
       navigate('/')
     } catch (err) {
       toast.error('Erro ao salvar orçamento. Verifique os dados e tente novamente.')
@@ -111,7 +111,7 @@ export default function NovoOrcamento() {
     setSavingModal(true)
     try {
       const id = await svc.createCliente(newCliente)
-      await refresh()
+      addCliente({ id, ...newCliente })
       setClienteId(id)
       setShowNovoCliente(false)
       setNewCliente({ nome: '', celular: '' })
@@ -125,8 +125,9 @@ export default function NovoOrcamento() {
     if (!newCarro.nome) return
     setSavingModal(true)
     try {
-      const id = await svc.createCarro({ ...newCarro, clienteId: clienteId || null })
-      await refresh()
+      const carroData = { ...newCarro, clienteId: clienteId || null }
+      const id = await svc.createCarro(carroData)
+      addCarro({ id, ...carroData })
       setCarroId(id)
       setShowNovoCarro(false)
       setNewCarro({ nome: '', marca: '', cor: '', ano: '', placa: '' })
