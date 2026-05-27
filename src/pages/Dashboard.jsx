@@ -8,10 +8,12 @@ import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
 
 const STATUS_FILTERS = [
-  { value: 'todos', label: 'Todos' },
-  { value: 'pendente', label: 'Pendentes' },
-  { value: 'faturado', label: 'Faturados' },
-  { value: 'cancelado', label: 'Cancelados' },
+  { value: 'todos',      label: 'Todos' },
+  { value: 'rascunho',   label: 'Rascunho' },
+  { value: 'em_analise', label: 'Em Análise' },
+  { value: 'aprovado',   label: 'Aprovados' },
+  { value: 'reprovado',  label: 'Reprovados' },
+  { value: 'concluido',  label: 'Concluídos' },
 ]
 
 export default function Dashboard() {
@@ -21,11 +23,12 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState('todos')
 
   const stats = useMemo(() => ({
-    total: orcamentos.length,
-    pendentes: orcamentos.filter((o) => o.status === 'pendente').length,
-    faturados: orcamentos.filter((o) => o.status === 'faturado').length,
-    cancelados: orcamentos.filter((o) => o.status === 'cancelado').length,
-    totalFaturado: orcamentos.filter((o) => o.status === 'faturado').reduce((s, o) => s + (o.totalGeral || 0), 0),
+    total:     orcamentos.length,
+    abertos:   orcamentos.filter((o) => ['rascunho','em_analise'].includes(o.status)).length,
+    aprovados: orcamentos.filter((o) => o.status === 'aprovado').length,
+    concluidos: orcamentos.filter((o) => o.status === 'concluido').length,
+    totalAprovado: orcamentos.filter((o) => ['aprovado','concluido'].includes(o.status))
+      .reduce((s, o) => s + (o.totalGeral || o.total || 0), 0),
   }), [orcamentos])
 
   const filtered = useMemo(() => {
@@ -60,9 +63,9 @@ export default function Dashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Total" value={stats.total} icon={FileText} color="yellow" />
-        <StatCard label="Pendentes" value={stats.pendentes} icon={Clock} color="amber" />
-        <StatCard label="Faturados" value={stats.faturados} icon={CheckCircle} color="green" sub={formatCurrency(stats.totalFaturado)} />
-        <StatCard label="Cancelados" value={stats.cancelados} icon={XCircle} color="red" />
+        <StatCard label="Em aberto" value={stats.abertos} icon={Clock} color="amber" />
+        <StatCard label="Aprovados" value={stats.aprovados} icon={CheckCircle} color="green" sub={formatCurrency(stats.totalAprovado)} />
+        <StatCard label="Concluídos" value={stats.concluidos} icon={XCircle} color="blue" />
       </div>
 
       {/* Filters */}

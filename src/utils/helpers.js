@@ -16,36 +16,29 @@ export const formatDatetime = (ts) => {
   }).format(date)
 }
 
-export const statusLabel = (status) => ({
-  pendente: 'Pendente',
-  faturado: 'Faturado',
-  cancelado: 'Cancelado',
-}[status] ?? status)
+export const STATUS = {
+  rascunho:   { label: 'Rascunho',    badge: 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700' },
+  em_analise: { label: 'Em Análise',  badge: 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800' },
+  aprovado:   { label: 'Aprovado',    badge: 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800' },
+  reprovado:  { label: 'Reprovado',   badge: 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800' },
+  concluido:  { label: 'Concluído',   badge: 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800' },
+}
 
-export const statusClass = (status) => ({
-  pendente: 'badge-pending',
-  faturado: 'badge-invoiced',
-  cancelado: 'badge-cancelled',
-}[status] ?? 'badge-pending')
+export const statusLabel = (status) => STATUS[status]?.label ?? status
+export const statusClass  = (status) => STATUS[status]?.badge  ?? STATUS.rascunho.badge
 
 export const calcTotals = (itens = {}, extras = {}) => {
-  const totalMaoDeObra = (itens.servicos ?? []).reduce((s, i) => s + (Number(i.valor) * Number(i.quantidade || 1)), 0)
-
-  const totalPecasSemMarkup = (itens.pecas ?? []).reduce((s, i) => s + (Number(i.valor) * Number(i.quantidade || 1)), 0)
-  const markup = Number(extras.markup ?? 20) / 100
+  const totalMaoDeObra = (itens.servicos ?? []).reduce(
+    (s, i) => s + (Number(i.valor) * Number(i.quantidade || 1)), 0
+  )
+  const totalPecasSemMarkup = (itens.pecas ?? []).reduce(
+    (s, i) => s + (Number(i.valor) * Number(i.quantidade || 1)), 0
+  )
+  const markup   = Number(extras.markup ?? 20) / 100
   const totalMarkup = totalPecasSemMarkup * markup
-  const totalPecas = totalPecasSemMarkup + totalMarkup
-
+  const totalPecas  = totalPecasSemMarkup + totalMarkup
   const rastreamento = Number(extras.rastreamento ?? 0)
+  const totalGeral   = totalMaoDeObra + totalPecas + rastreamento
 
-  const totalGeral = totalMaoDeObra + totalPecas + rastreamento
-
-  return {
-    totalMaoDeObra,
-    totalPecasSemMarkup,
-    totalMarkup,
-    totalPecas,
-    rastreamento,
-    totalGeral,
-  }
+  return { totalMaoDeObra, totalPecasSemMarkup, totalMarkup, totalPecas, rastreamento, totalGeral }
 }

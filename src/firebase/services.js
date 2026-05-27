@@ -1,16 +1,6 @@
 import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-  runTransaction,
+  collection, doc, getDocs, getDoc, addDoc,
+  updateDoc, deleteDoc, query, orderBy, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './config'
 
@@ -45,28 +35,28 @@ export const remove = async (col, id) => {
 
 // ── Clientes ─────────────────────────────────────────────────────────────────
 
-export const getClientes = () => getAll('clientes')
+export const getClientes  = () => getAll('clientes')
 export const createCliente = (data) => create('clientes', data)
 export const updateCliente = (id, data) => update('clientes', id, data)
 export const deleteCliente = (id) => remove('clientes', id)
 
 // ── Carros ───────────────────────────────────────────────────────────────────
 
-export const getCarros = () => getAll('carros')
+export const getCarros  = () => getAll('carros')
 export const createCarro = (data) => create('carros', data)
 export const updateCarro = (id, data) => update('carros', id, data)
 export const deleteCarro = (id) => remove('carros', id)
 
 // ── Serviços ─────────────────────────────────────────────────────────────────
 
-export const getServicos = () => getAll('servicos')
+export const getServicos  = () => getAll('servicos')
 export const createServico = (data) => create('servicos', data)
 export const updateServico = (id, data) => update('servicos', id, data)
 export const deleteServico = (id) => remove('servicos', id)
 
-// ── Peças ─────────────────────────────────────────────────────────────────────
+// ── Peças ────────────────────────────────────────────────────────────────────
 
-export const getPecas = () => getAll('pecas')
+export const getPecas  = () => getAll('pecas')
 export const createPeca = (data) => create('pecas', data)
 export const updatePeca = (id, data) => update('pecas', id, data)
 export const deletePeca = (id) => remove('pecas', id)
@@ -88,33 +78,27 @@ export const getNextOrcamentoNumber = async () => {
   return Math.max(...nums) + 1
 }
 
+// Campos obrigatórios pelas Firestore Rules:
+// clienteNome, veiculoModelo, veiculoPlaca, veiculoAno, total, status, createdBy
 export const createOrcamento = async (data) => {
   const numero = await getNextOrcamentoNumber()
-  return create('orcamentos', { ...data, numero, status: 'pendente' })
-}
-
-export const updateOrcamento = (id, data) => update('orcamentos', id, data)
-export const deleteOrcamento = (id) => remove('orcamentos', id)
-
-export const faturarOrcamento = (id) =>
-  update('orcamentos', id, { status: 'faturado', faturadoEm: serverTimestamp() })
-
-export const cancelarOrcamento = (id) =>
-  update('orcamentos', id, { status: 'cancelado', canceladoEm: serverTimestamp() })
-
-// ── Usuários (perfil/role) ────────────────────────────────────────────────────
-
-export const getUserProfile = (uid) => getById('usuarios', uid)
-
-export const createUserProfile = (uid, data) =>
-  updateDoc(doc(db, 'usuarios', uid), data).catch(() =>
-    addDoc(collection(db, 'usuarios'), { uid, ...data })
-  )
-
-export const setUserRole = async (uid, role) => {
-  const ref = doc(db, 'usuarios', uid)
-  await updateDoc(ref, { role }).catch(async () => {
-    const { setDoc } = await import('firebase/firestore')
-    await setDoc(ref, { uid, role, createdAt: serverTimestamp() })
+  return create('orcamentos', {
+    ...data,
+    numero,
+    status: 'rascunho',
+    total: data.totalGeral || 0,
   })
 }
+
+export const updateOrcamento = (id, data) =>
+  update('orcamentos', id, {
+    ...data,
+    total: data.totalGeral || data.total || 0,
+  })
+
+export const atualizarStatus = (id, status, extraFields = {}) =>
+  update('orcamentos', id, { status, ...extraFields })
+
+// ── Usuários ──────────────────────────────────────────────────────────────────
+
+export const getUserProfile = (uid) => getById('usuarios', uid)

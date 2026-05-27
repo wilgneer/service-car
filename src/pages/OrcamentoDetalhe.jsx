@@ -27,8 +27,8 @@ export default function OrcamentoDetalhe() {
 
   if (!orcamento) return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-brand-yellow border-t-transparent rounded-full" /></div>
 
-  const isFaturado = orcamento.status === 'faturado'
-  const canEdit = isAdmin || !isFaturado
+  const isConcluido = orcamento.status === 'concluido'
+  const canEdit = isAdmin || !isConcluido
   const t = calcTotals(orcamento.itens, orcamento.extras)
 
   const action = async (fn) => {
@@ -37,9 +37,10 @@ export default function OrcamentoDetalhe() {
     finally { setLoading(false) }
   }
 
-  const handleFaturar = () => action(() => svc.faturarOrcamento(id))
-  const handleCancelar = () => action(() => svc.cancelarOrcamento(id))
-  const handleDelete = () => action(async () => { await svc.deleteOrcamento(id); navigate('/') })
+  const handleAprovar  = () => action(() => svc.atualizarStatus(id, 'aprovado',  { aprovadoEm: new Date().toISOString() }))
+  const handleReprovar = () => action(() => svc.atualizarStatus(id, 'reprovado', { reprovadoEm: new Date().toISOString() }))
+  const handleConcluir = () => action(() => svc.atualizarStatus(id, 'concluido', { concluidoEm: new Date().toISOString() }))
+  const handleDelete   = () => action(async () => { await svc.remove('orcamentos', id); navigate('/') })
 
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
@@ -61,15 +62,20 @@ export default function OrcamentoDetalhe() {
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2">
-        {orcamento.status === 'pendente' && (
+        {['rascunho','em_analise'].includes(orcamento.status) && (
           <>
-            <Button onClick={() => setConfirm('faturar')} variant="primary" size="sm">
-              <CheckCircle size={15} /> Faturar
+            <Button onClick={() => setConfirm('aprovar')} variant="primary" size="sm">
+              <CheckCircle size={15} /> Aprovar
             </Button>
-            <Button onClick={() => setConfirm('cancelar')} variant="secondary" size="sm">
-              <XCircle size={15} /> Cancelar
+            <Button onClick={() => setConfirm('reprovar')} variant="secondary" size="sm">
+              <XCircle size={15} /> Reprovar
             </Button>
           </>
+        )}
+        {orcamento.status === 'aprovado' && (
+          <Button onClick={() => setConfirm('concluir')} variant="primary" size="sm">
+            <CheckCircle size={15} /> Concluir
+          </Button>
         )}
         {canEdit && (
           <Button onClick={() => navigate(`/orcamentos/${id}/editar`)} variant="secondary" size="sm">
@@ -162,19 +168,26 @@ export default function OrcamentoDetalhe() {
 
       {/* Confirm dialogs */}
       <ConfirmDialog
-        open={confirm === 'faturar'}
+        open={confirm === 'aprovar'}
         onClose={() => setConfirm(null)}
-        onConfirm={handleFaturar}
-        title="Faturar orçamento?"
-        message="O orçamento será marcado como faturado e não poderá ser editado por usuários comuns."
+        onConfirm={handleAprovar}
+        title="Aprovar orçamento?"
+        message="O orçamento será marcado como aprovado."
       />
       <ConfirmDialog
-        open={confirm === 'cancelar'}
+        open={confirm === 'reprovar'}
         onClose={() => setConfirm(null)}
-        onConfirm={handleCancelar}
-        title="Cancelar orçamento?"
-        message="O orçamento será marcado como cancelado."
+        onConfirm={handleReprovar}
+        title="Reprovar orçamento?"
+        message="O orçamento será marcado como reprovado."
         danger
+      />
+      <ConfirmDialog
+        open={confirm === 'concluir'}
+        onClose={() => setConfirm(null)}
+        onConfirm={handleConcluir}
+        title="Concluir orçamento?"
+        message="O orçamento será marcado como concluído."
       />
       <ConfirmDialog
         open={confirm === 'deletar'}

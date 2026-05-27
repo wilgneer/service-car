@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Trash2, ChevronLeft, UserPlus, Car as CarIcon, Info } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
+import { useAuth } from '../contexts/AuthContext'
 import * as svc from '../firebase/services'
 import { formatCurrency, calcTotals } from '../utils/helpers'
 import Button from '../components/ui/Button'
@@ -14,6 +15,7 @@ const emptyServico = () => ({ descricao: '', valor: '', quantidade: 1 })
 export default function NovoOrcamento() {
   const navigate = useNavigate()
   const { clientes, carros, servicos, pecas, refresh } = useApp()
+  const { user } = useAuth()
 
   const [clienteId, setClienteId] = useState('')
   const [carroId, setCarroId] = useState('')
@@ -69,14 +71,28 @@ export default function NovoOrcamento() {
       }
       const extras = { markup: Number(markup) || 20, rastreamento: Number(rastreamento) || 0 }
       const t = calcTotals(itens, extras)
+
+      // Campos desnormalizados exigidos pelas Firestore Rules
+      const cliente = clientes.find((c) => c.id === clienteId)
+      const carro   = carros.find((c) => c.id === carroId)
+
       await svc.createOrcamento({
-        clienteId, carroId, itens, extras,
-        totalMaoDeObra: t.totalMaoDeObra,
+        clienteId,
+        carroId,
+        itens,
+        extras,
+        // Campos obrigatórios pelas rules
+        clienteNome:   cliente?.nome   ?? '',
+        veiculoModelo: carro?.nome     ?? '',
+        veiculoPlaca:  carro?.placa    ?? '',
+        veiculoAno:    carro?.ano      ?? '',
+        createdBy:     user?.uid       ?? '',
+        totalMaoDeObra:      t.totalMaoDeObra,
         totalPecasSemMarkup: t.totalPecasSemMarkup,
-        totalMarkup: t.totalMarkup,
-        totalPecas: t.totalPecas,
-        rastreamento: t.rastreamento,
-        totalGeral: t.totalGeral,
+        totalMarkup:         t.totalMarkup,
+        totalPecas:          t.totalPecas,
+        rastreamento:        t.rastreamento,
+        totalGeral:          t.totalGeral,
       })
       await refresh()
       navigate('/')

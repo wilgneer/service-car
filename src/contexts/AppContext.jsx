@@ -28,7 +28,8 @@ const DEMO_DATA = {
   ],
   orcamentos: [
     {
-      id: 'o1', numero: 1, clienteId: 'c1', carroId: 'v1', status: 'faturado',
+      id: 'o1', numero: 1, clienteId: 'c1', carroId: 'v1', status: 'aprovado',
+      clienteNome: 'João Silva', veiculoModelo: 'Civic', veiculoPlaca: 'ABC-1234', veiculoAno: '2021', createdBy: 'demo',
       extras: { markup: 20, rastreamento: 0 },
       itens: {
         servicos: [{ descricao: 'Troca de Óleo', valor: 150, quantidade: 1 }],
@@ -39,7 +40,8 @@ const DEMO_DATA = {
       faturadoEm: { toDate: () => new Date('2026-04-10') },
     },
     {
-      id: 'o2', numero: 2, clienteId: 'c2', carroId: 'v2', status: 'pendente',
+      id: 'o2', numero: 2, clienteId: 'c2', carroId: 'v2', status: 'rascunho',
+      clienteNome: 'Maria Oliveira', veiculoModelo: 'Corolla', veiculoPlaca: 'DEF-5678', veiculoAno: '2020', createdBy: 'demo',
       extras: { markup: 20, rastreamento: 180 },
       itens: {
         servicos: [{ descricao: 'Alinhamento', valor: 120, quantidade: 1 }, { descricao: 'Revisão Geral', valor: 350, quantidade: 1 }],
@@ -49,7 +51,8 @@ const DEMO_DATA = {
       createdAt: { toDate: () => new Date('2026-04-20') },
     },
     {
-      id: 'o3', numero: 3, clienteId: 'c3', carroId: 'v3', status: 'cancelado',
+      id: 'o3', numero: 3, clienteId: 'c3', carroId: 'v3', status: 'reprovado',
+      clienteNome: 'Carlos Souza', veiculoModelo: 'Onix', veiculoPlaca: 'GHI-9012', veiculoAno: '2022', createdBy: 'demo',
       extras: { markup: 20, rastreamento: 0 },
       itens: {
         servicos: [{ descricao: 'Revisão Geral', valor: 350, quantidade: 1 }],
@@ -60,7 +63,8 @@ const DEMO_DATA = {
       canceladoEm: { toDate: () => new Date('2026-04-16') },
     },
     {
-      id: 'o4', numero: 4, clienteId: 'c1', carroId: 'v1', status: 'pendente',
+      id: 'o4', numero: 4, clienteId: 'c1', carroId: 'v1', status: 'em_analise',
+      clienteNome: 'João Silva', veiculoModelo: 'Civic', veiculoPlaca: 'ABC-1234', veiculoAno: '2021', createdBy: 'demo',
       extras: { markup: 20, rastreamento: 0 },
       itens: {
         servicos: [{ descricao: 'Mão de Obra - Freios', valor: 180, quantidade: 1 }],
