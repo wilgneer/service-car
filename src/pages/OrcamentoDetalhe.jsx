@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Edit, Trash2, CheckCircle, XCircle, Printer, Car, Lock, Wrench } from 'lucide-react'
+import { ChevronLeft, Edit, Trash2, CheckCircle, XCircle, Printer, Car, Lock, Wrench, DollarSign } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -70,6 +70,7 @@ export default function OrcamentoDetalhe() {
   const handleAprovar  = () => changeStatus('aprovado',  { aprovadoEm:  new Date().toISOString() }, 'Orçamento aprovado!',  'orcamento_aprovado')
   const handleReprovar = () => changeStatus('reprovado', { reprovadoEm: new Date().toISOString() }, 'Orçamento reprovado.', 'orcamento_reprovado')
   const handleConcluir = () => changeStatus('concluido', { concluidoEm: new Date().toISOString() }, 'Orçamento concluído!', 'orcamento_concluido')
+  const handlePagar    = () => changeStatus('pago',      { pagoEm:      new Date().toISOString() }, 'Pagamento registrado!','orcamento_pago')
 
   const openDelete = () => { setDeletePass(''); setDeletePassErr(''); setDeleteModal(true) }
 
@@ -147,9 +148,14 @@ export default function OrcamentoDetalhe() {
           </>
         )}
         {orcamento.status === 'aprovado' && (
-          <Button onClick={() => setConfirm('concluir')} variant="primary" size="sm">
-            <CheckCircle size={15} /> Concluir
-          </Button>
+          <>
+            <Button onClick={() => setConfirm('pagar')} variant="primary" size="sm">
+              <DollarSign size={15} /> Pago
+            </Button>
+            <Button onClick={() => setConfirm('concluir')} variant="secondary" size="sm">
+              <CheckCircle size={15} /> Concluir
+            </Button>
+          </>
         )}
         {canEdit && (
           <Button onClick={() => navigate(`/orcamentos/${id}/editar`)} variant="secondary" size="sm">
@@ -319,9 +325,10 @@ export default function OrcamentoDetalhe() {
         </div>
       </Modal>
 
-      <ConfirmDialog open={confirm === 'aprovar'}  onClose={() => setConfirm(null)} onConfirm={handleAprovar}  title="Aprovar orçamento?"  message="O orçamento será marcado como aprovado." />
-      <ConfirmDialog open={confirm === 'reprovar'} onClose={() => setConfirm(null)} onConfirm={handleReprovar} title="Reprovar orçamento?" message="O orçamento será marcado como reprovado." danger />
-      <ConfirmDialog open={confirm === 'concluir'} onClose={() => setConfirm(null)} onConfirm={handleConcluir} title="Concluir orçamento?" message="O orçamento será marcado como concluído." />
+      <ConfirmDialog open={confirm === 'aprovar'}  onClose={() => setConfirm(null)} onConfirm={handleAprovar}  title="Aprovar orçamento?"   message="O orçamento será marcado como aprovado." />
+      <ConfirmDialog open={confirm === 'reprovar'} onClose={() => setConfirm(null)} onConfirm={handleReprovar} title="Reprovar orçamento?"  message="O orçamento será marcado como reprovado." danger />
+      <ConfirmDialog open={confirm === 'concluir'} onClose={() => setConfirm(null)} onConfirm={handleConcluir} title="Concluir orçamento?"  message="O orçamento será marcado como concluído." />
+      <ConfirmDialog open={confirm === 'pagar'}    onClose={() => setConfirm(null)} onConfirm={handlePagar}    title="Registrar pagamento?" message="Isso marcará o orçamento como PAGO e registrará como entrada no financeiro." />
     </div>
   )
 }

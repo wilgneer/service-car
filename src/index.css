@@ -53,7 +53,7 @@
     @apply bg-red-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-150 inline-flex items-center gap-2 text-sm;
   }
   .input-field {
-    @apply w-full border border-brand-gray-border rounded-lg px-3 py-2 text-sm text-brand-black bg-white focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition-all duration-150 placeholder:text-brand-gray-light;
+    @apply w-full border border-brand-gray-border rounded-lg px-3 py-2 text-sm text-brand-black bg-white focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition-all duration-150 placeholder:text-[#C0C0C0];
   }
   .card {
     @apply bg-white rounded-xl border border-brand-gray-border shadow-sm;

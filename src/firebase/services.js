@@ -160,6 +160,13 @@ export const updateOrcamento = (id, data) =>
 export const atualizarStatus = (id, status, extraFields = {}) =>
   update('orcamentos', id, { status, ...extraFields })
 
+// ── Materiais (saídas de estoque/compras) ─────────────────────────────────────
+
+export const getMateriais    = () => getAll('materiais')
+export const createMaterial  = (data) => create('materiais', data)
+export const updateMaterial  = (id, data) => update('materiais', id, data)
+export const deleteMaterial  = (id) => remove('materiais', id)
+
 // ── Fornecedores ──────────────────────────────────────────────────────────────
 
 export const getFornecedores  = () => getAll('fornecedores')

@@ -85,6 +85,7 @@ export function AppProvider({ children }) {
   const [orcamentos,    setOrcamentos]    = useState([])
   const [fornecedores,  setFornecedores]  = useState([])
   const [configuracoes, setConfiguracoes] = useState(DEFAULT_CONFIG)
+  const [materiais,     setMateriais]     = useState([])
   const [orcamentosLastDoc, setOrcamentosLastDoc] = useState(null)
   const [orcamentosHasMore, setOrcamentosHasMore] = useState(false)
   const [loadingData,     setLoadingData]     = useState(true)
@@ -111,7 +112,7 @@ export function AppProvider({ children }) {
       console.error('[AppContext] Firestore inacessível. Verifique as Security Rules e a conexão.')
     }
     try {
-      const [c, ca, s, p, oResult, forn, cfg] = await Promise.all([
+      const [c, ca, s, p, oResult, forn, cfg, mat] = await Promise.all([
         svc.getClientes(),
         svc.getCarros(),
         svc.getServicos(),
@@ -119,12 +120,14 @@ export function AppProvider({ children }) {
         svc.getOrcamentos(50),
         svc.getFornecedores(),
         svc.getConfiguracoes(),
+        svc.getMateriais(),
       ])
       setClientes(c); setCarros(ca); setServicos(s); setPecas(p)
       setOrcamentos(oResult.items)
       setOrcamentosLastDoc(oResult.lastDoc)
       setOrcamentosHasMore(oResult.hasMore)
       setFornecedores(forn)
+      setMateriais(mat)
       if (cfg) setConfiguracoes((prev) => ({ ...prev, ...cfg }))
     } catch (err) {
       console.error('[AppContext] Falha ao carregar dados do Firestore:', err?.message ?? err)
@@ -157,16 +160,17 @@ export function AppProvider({ children }) {
   const refresh = useCallback(async () => {
     if (isDemo) return
     try {
-      const [c, ca, s, p, oResult, forn, cfg] = await Promise.all([
+      const [c, ca, s, p, oResult, forn, cfg, mat] = await Promise.all([
         svc.getClientes(), svc.getCarros(), svc.getServicos(),
         svc.getPecas(), svc.getOrcamentos(50),
-        svc.getFornecedores(), svc.getConfiguracoes(),
+        svc.getFornecedores(), svc.getConfiguracoes(), svc.getMateriais(),
       ])
       setClientes(c); setCarros(ca); setServicos(s); setPecas(p)
       setOrcamentos(oResult.items)
       setOrcamentosLastDoc(oResult.lastDoc)
       setOrcamentosHasMore(oResult.hasMore)
       setFornecedores(forn)
+      setMateriais(mat)
       if (cfg) setConfiguracoes((prev) => ({ ...prev, ...cfg }))
     } catch { /* silencioso */ }
   }, [isDemo])
@@ -208,11 +212,16 @@ export function AppProvider({ children }) {
   // Configurações
   const updateConfiguracoes = (data) => setConfiguracoes((p) => ({ ...p, ...data }))
 
+  // Materiais
+  const addMaterial   = (item)     => setMateriais((p) => [item, ...p])
+  const editMaterial  = (id, data) => setMateriais((p) => p.map((m) => m.id === id ? { ...m, ...data } : m))
+  const dropMaterial  = (id)       => setMateriais((p) => p.filter((m) => m.id !== id))
+
   return (
     <AppContext.Provider value={{
       clientes, carros, servicos, pecas, orcamentos, loadingData,
       orcamentosHasMore, loadingMore, loadMoreOrcamentos,
-      fornecedores, configuracoes,
+      fornecedores, configuracoes, materiais,
       refresh,
       addCliente,  editCliente,  dropCliente,
       addCarro,    editCarro,    dropCarro,
@@ -221,6 +230,7 @@ export function AppProvider({ children }) {
       addOrcamento, editOrcamento, dropOrcamento,
       addFornecedor, editFornecedor, dropFornecedor,
       updateConfiguracoes,
+      addMaterial, editMaterial, dropMaterial,
     }}>
       {children}
     </AppContext.Provider>

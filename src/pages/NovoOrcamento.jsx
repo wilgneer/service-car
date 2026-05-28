@@ -404,21 +404,23 @@ export default function NovoOrcamento() {
           </div>
         </div>
 
-        {/* Rastreamento */}
-        <div className="card p-4 flex items-center gap-4">
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-brand-black mb-1">Rastreamento</p>
-            <p className="text-xs text-brand-gray-light">Valor do serviço de rastreamento (opcional)</p>
+        {/* Rastreamento — apenas Mecânica */}
+        {tipoServico === 'mecanica' && (
+          <div className="card p-4 flex items-center gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-brand-black mb-1">Rastreamento</p>
+              <p className="text-xs text-brand-gray-light">Valor do serviço de rastreamento (opcional)</p>
+            </div>
+            <input
+              type="number"
+              value={rastreamento}
+              onChange={(e) => setRastreamento(e.target.value)}
+              placeholder="0,00"
+              step="0.01"
+              className="input-field w-36 text-right"
+            />
           </div>
-          <input
-            type="number"
-            value={rastreamento}
-            onChange={(e) => setRastreamento(e.target.value)}
-            placeholder="0,00"
-            step="0.01"
-            className="input-field w-36 text-right"
-          />
-        </div>
+        )}
 
         {/* Resumo */}
         <div className="card p-4 flex flex-col gap-2">
