@@ -95,16 +95,27 @@ export const getOrcamentosPage = async (afterDoc, pageSize = 50) => {
 export const getOrcamentoById = (id) => getById('orcamentos', id)
 
 export const getNextOrcamentoNumber = async () => {
-  const snap = await getDocs(collection(db, 'orcamentos'))
+  // Busca só o último documento ordenado por numero DESC — muito mais rápido
+  const q = query(
+    collection(db, 'orcamentos'),
+    orderBy('numero', 'desc'),
+    limit(1),
+  )
+  const snap = await getDocs(q)
   if (snap.empty) return 1
-  const nums = snap.docs.map((d) => d.data().numero || 0)
-  return Math.max(...nums) + 1
+  return (snap.docs[0].data().numero || 0) + 1
 }
 
 // Campos obrigatórios pelas Firestore Rules:
 // clienteNome, veiculoModelo, veiculoPlaca, veiculoAno, total, status, createdBy
 export const createOrcamento = async (data) => {
-  const numero = await getNextOrcamentoNumber()
+  // Fallback: se getNextOrcamentoNumber falhar usa timestamp como numero
+  let numero = Date.now()
+  try {
+    numero = await getNextOrcamentoNumber()
+  } catch (e) {
+    console.warn('[createOrcamento] getNextOrcamentoNumber falhou, usando fallback:', e?.message)
+  }
   return create('orcamentos', {
     ...data,
     numero,

@@ -103,8 +103,9 @@ export default function NovoOrcamento() {
       toast.success('Orçamento criado com sucesso!')
       navigate('/')
     } catch (err) {
+      console.error('[NovoOrcamento] Erro ao criar orçamento:', err)
       logger.error('erro_ao_salvar', 'Erro ao criar orçamento', { err: err?.message })
-      toast.error('Erro ao salvar orçamento. Verifique os dados e tente novamente.')
+      toast.error(`Erro ao salvar: ${err?.message ?? 'verifique o console (F12)'}`)
     } finally {
       setLoading(false)
     }
