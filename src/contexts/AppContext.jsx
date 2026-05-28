@@ -5,6 +5,15 @@ import { useAuth } from './AuthContext'
 
 const AppContext = createContext(null)
 
+// ── Config padrão da empresa ───────────────────────────────────────────────────
+const DEFAULT_CONFIG = {
+  nome:     'Autocenter Floresta',
+  cnpj:     '50157314000170',
+  endereco: 'Rua Jacui 692',
+  cep:      '31110050',
+  telefone: '31984743830',
+}
+
 // ── Dados demo ────────────────────────────────────────────────────────────────
 const DEMO_DATA = {
   clientes: [
@@ -26,6 +35,9 @@ const DEMO_DATA = {
     { id: 'p1', tipoPeca: 'Filtro de Óleo',    valor: 45  },
     { id: 'p2', tipoPeca: 'Pastilha de Freio', valor: 180 },
     { id: 'p3', tipoPeca: 'Correia Dentada',   valor: 280 },
+  ],
+  fornecedores: [
+    { id: 'f1', nome: 'Peças & Cia', cidade: 'Belo Horizonte', telefone: '', cnpj: '' },
   ],
   orcamentos: [
     {
@@ -66,11 +78,13 @@ const DEMO_DATA = {
 
 export function AppProvider({ children }) {
   const { isDemo } = useAuth()
-  const [clientes,   setClientes]   = useState([])
-  const [carros,     setCarros]     = useState([])
-  const [servicos,   setServicos]   = useState([])
-  const [pecas,      setPecas]      = useState([])
-  const [orcamentos, setOrcamentos] = useState([])
+  const [clientes,      setClientes]      = useState([])
+  const [carros,        setCarros]        = useState([])
+  const [servicos,      setServicos]      = useState([])
+  const [pecas,         setPecas]         = useState([])
+  const [orcamentos,    setOrcamentos]    = useState([])
+  const [fornecedores,  setFornecedores]  = useState([])
+  const [configuracoes, setConfiguracoes] = useState(DEFAULT_CONFIG)
   const [orcamentosLastDoc, setOrcamentosLastDoc] = useState(null)
   const [orcamentosHasMore, setOrcamentosHasMore] = useState(false)
   const [loadingData,     setLoadingData]     = useState(true)
@@ -85,6 +99,7 @@ export function AppProvider({ children }) {
       setServicos(DEMO_DATA.servicos)
       setPecas(DEMO_DATA.pecas)
       setOrcamentos(DEMO_DATA.orcamentos)
+      setFornecedores(DEMO_DATA.fornecedores)
       setOrcamentosHasMore(false)
       setLoadingData(false)
       return
@@ -96,17 +111,21 @@ export function AppProvider({ children }) {
       console.error('[AppContext] Firestore inacessível. Verifique as Security Rules e a conexão.')
     }
     try {
-      const [c, ca, s, p, oResult] = await Promise.all([
+      const [c, ca, s, p, oResult, forn, cfg] = await Promise.all([
         svc.getClientes(),
         svc.getCarros(),
         svc.getServicos(),
         svc.getPecas(),
         svc.getOrcamentos(50),
+        svc.getFornecedores(),
+        svc.getConfiguracoes(),
       ])
       setClientes(c); setCarros(ca); setServicos(s); setPecas(p)
       setOrcamentos(oResult.items)
       setOrcamentosLastDoc(oResult.lastDoc)
       setOrcamentosHasMore(oResult.hasMore)
+      setFornecedores(forn)
+      if (cfg) setConfiguracoes((prev) => ({ ...prev, ...cfg }))
     } catch (err) {
       console.error('[AppContext] Falha ao carregar dados do Firestore:', err?.message ?? err)
     } finally {
@@ -138,14 +157,17 @@ export function AppProvider({ children }) {
   const refresh = useCallback(async () => {
     if (isDemo) return
     try {
-      const [c, ca, s, p, oResult] = await Promise.all([
+      const [c, ca, s, p, oResult, forn, cfg] = await Promise.all([
         svc.getClientes(), svc.getCarros(), svc.getServicos(),
         svc.getPecas(), svc.getOrcamentos(50),
+        svc.getFornecedores(), svc.getConfiguracoes(),
       ])
       setClientes(c); setCarros(ca); setServicos(s); setPecas(p)
       setOrcamentos(oResult.items)
       setOrcamentosLastDoc(oResult.lastDoc)
       setOrcamentosHasMore(oResult.hasMore)
+      setFornecedores(forn)
+      if (cfg) setConfiguracoes((prev) => ({ ...prev, ...cfg }))
     } catch { /* silencioso */ }
   }, [isDemo])
 
@@ -178,16 +200,27 @@ export function AppProvider({ children }) {
   const editOrcamento   = (id, data) => setOrcamentos((p) => p.map((o) => o.id === id ? { ...o, ...data } : o))
   const dropOrcamento   = (id)       => setOrcamentos((p) => p.filter((o) => o.id !== id))
 
+  // Fornecedores
+  const addFornecedor   = (item)     => setFornecedores((p) => [item, ...p])
+  const editFornecedor  = (id, data) => setFornecedores((p) => p.map((f) => f.id === id ? { ...f, ...data } : f))
+  const dropFornecedor  = (id)       => setFornecedores((p) => p.filter((f) => f.id !== id))
+
+  // Configurações
+  const updateConfiguracoes = (data) => setConfiguracoes((p) => ({ ...p, ...data }))
+
   return (
     <AppContext.Provider value={{
       clientes, carros, servicos, pecas, orcamentos, loadingData,
       orcamentosHasMore, loadingMore, loadMoreOrcamentos,
+      fornecedores, configuracoes,
       refresh,
       addCliente,  editCliente,  dropCliente,
       addCarro,    editCarro,    dropCarro,
       addServico,  editServico,  dropServico,
       addPeca,     editPeca,     dropPeca,
       addOrcamento, editOrcamento, dropOrcamento,
+      addFornecedor, editFornecedor, dropFornecedor,
+      updateConfiguracoes,
     }}>
       {children}
     </AppContext.Provider>

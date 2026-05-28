@@ -18,6 +18,8 @@ const Pecas           = lazy(() => import('./pages/Pecas'))
 const Financeiro      = lazy(() => import('./pages/Financeiro'))
 const Relatorios      = lazy(() => import('./pages/Relatorios'))
 const Logs            = lazy(() => import('./pages/Logs'))
+const Fornecedores    = lazy(() => import('./pages/Fornecedores'))
+const Configuracoes   = lazy(() => import('./pages/Configuracoes'))
 
 // ── Loading inline (dentro do layout, não substitui a tela toda) ──────────────
 function PageLoader() {
@@ -75,6 +77,8 @@ function AppRoutes() {
       <Route path="/financeiro"              element={<PrivateRoute><Financeiro /></PrivateRoute>} />
       <Route path="/relatorios"              element={<PrivateRoute><Relatorios /></PrivateRoute>} />
       <Route path="/logs"                    element={<PrivateRoute><Logs /></PrivateRoute>} />
+      <Route path="/fornecedores"            element={<PrivateRoute><Fornecedores /></PrivateRoute>} />
+      <Route path="/configuracoes"           element={<PrivateRoute><Configuracoes /></PrivateRoute>} />
       <Route path="*"                        element={<Navigate to="/" replace />} />
     </Routes>
   )

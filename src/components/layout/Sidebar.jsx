@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   FileText, Users, Car, Wrench, Package,
   DollarSign, BarChart2, LogOut, Menu, X,
-  Shield, ScrollText, MoreHorizontal,
+  Shield, ScrollText, MoreHorizontal, Building2, Settings,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -13,8 +13,10 @@ const navItems = [
   { to: '/carros',    label: 'Veículos',   icon: Car },
   { to: '/servicos',  label: 'Serviços',   icon: Wrench },
   { to: '/pecas',     label: 'Peças',      icon: Package },
-  { to: '/financeiro',label: 'Financeiro', icon: DollarSign },
-  { to: '/relatorios',label: 'Relatórios', icon: BarChart2 },
+  { to: '/financeiro',   label: 'Financeiro',   icon: DollarSign },
+  { to: '/relatorios',   label: 'Relatórios',   icon: BarChart2 },
+  { to: '/fornecedores', label: 'Fornecedores', icon: Building2 },
+  { to: '/configuracoes',label: 'Configurações',icon: Settings },
 ]
 
 // Itens que aparecem no bottom nav mobile (os 4 principais + "Mais")

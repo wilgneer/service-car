@@ -27,6 +27,25 @@ export const STATUS = {
 export const statusLabel = (status) => STATUS[status]?.label ?? status
 export const statusClass  = (status) => STATUS[status]?.badge  ?? STATUS.rascunho.badge
 
+// Formata uma string de data "YYYY-MM-DD" → "DD/MM/YYYY"
+export const formatDateLocal = (dateStr) => {
+  if (!dateStr) return '-'
+  const [year, month, day] = dateStr.split('-')
+  return `${day}/${month}/${year}`
+}
+
+// Formata CNPJ (string de dígitos → XX.XXX.XXX/XXXX-XX)
+export const formatCnpj = (cnpj) => {
+  const d = (cnpj ?? '').replace(/\D/g, '').padStart(14, '0')
+  return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12,14)}`
+}
+
+// Formata CEP (string de dígitos → XXXXX-XXX)
+export const formatCep = (cep) => {
+  const d = (cep ?? '').replace(/\D/g, '').padStart(8, '0')
+  return `${d.slice(0,5)}-${d.slice(5,8)}`
+}
+
 export const calcTotals = (itens = {}, extras = {}) => {
   const totalMaoDeObra = (itens.servicos ?? []).reduce(
     (s, i) => s + (Number(i.valor) * Number(i.quantidade || 1)), 0

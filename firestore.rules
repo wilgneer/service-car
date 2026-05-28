@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Clientes ──────────────────────────────────────────────────
+    match /clientes/{id} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ── Carros ────────────────────────────────────────────────────
+    match /carros/{id} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ── Serviços ──────────────────────────────────────────────────
+    match /servicos/{id} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ── Peças ─────────────────────────────────────────────────────
+    match /pecas/{id} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ── Orçamentos ────────────────────────────────────────────────
+    match /orcamentos/{id} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.keys().hasAll([
+                         'clienteNome', 'veiculoModelo', 'veiculoPlaca',
+                         'veiculoAno', 'total', 'status', 'createdBy'
+                       ]);
+      allow update, delete: if request.auth != null;
+    }
+
+    // ── Usuários ──────────────────────────────────────────────────
+    match /usuarios/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ── Logs ──────────────────────────────────────────────────────
+    match /logs/{id} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null;
+    }
+
+    match /fornecedores/{id} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /configuracoes/{id} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Edit, Trash2, CheckCircle, XCircle, Printer, Car, Lock } from 'lucide-react'
+import { ChevronLeft, Edit, Trash2, CheckCircle, XCircle, Printer, Car, Lock, Wrench } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLogger } from '../hooks/useLogger'
 import * as svc from '../firebase/services'
-import { formatCurrency, formatDate, formatDatetime, statusLabel, statusClass, calcTotals } from '../utils/helpers'
+import {
+  formatCurrency, formatDate, formatDatetime, formatDateLocal, formatCnpj, formatCep,
+  statusLabel, statusClass, calcTotals,
+} from '../utils/helpers'
 import Button from '../components/ui/Button'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import Modal from '../components/ui/Modal'
@@ -14,14 +17,13 @@ import Modal from '../components/ui/Modal'
 export default function OrcamentoDetalhe() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { orcamentos, clientes, carros, editOrcamento, dropOrcamento } = useApp()
+  const { orcamentos, clientes, carros, fornecedores, configuracoes, editOrcamento, dropOrcamento } = useApp()
   const { isAdmin } = useAuth()
-  const toast = useToast()
+  const toast  = useToast()
   const logger = useLogger()
 
   const [confirm,       setConfirm]       = useState(null)
   const [loading,       setLoading]       = useState(false)
-  // Delete com senha
   const [deleteModal,   setDeleteModal]   = useState(false)
   const [deletePass,    setDeletePass]    = useState('')
   const [deletePassErr, setDeletePassErr] = useState('')
@@ -44,6 +46,13 @@ export default function OrcamentoDetalhe() {
   const canEdit     = isAdmin || !isConcluido
   const t           = calcTotals(orcamento.itens, orcamento.extras)
   const markup      = orcamento.extras?.markup ?? 20
+  const isMecanica  = orcamento.tipoServico === 'mecanica'
+
+  const tipoLabel = orcamento.tipoServico === 'mecanica'
+    ? 'Mecânica'
+    : orcamento.tipoServico === 'funilaria'
+    ? 'Funilaria & Estética'
+    : null
 
   const changeStatus = async (status, extra, successMsg, logAction) => {
     setLoading(true)
@@ -65,10 +74,7 @@ export default function OrcamentoDetalhe() {
   const openDelete = () => { setDeletePass(''); setDeletePassErr(''); setDeleteModal(true) }
 
   const handleDelete = async () => {
-    if (deletePass !== '#admin') {
-      setDeletePassErr('Senha incorreta.')
-      return
-    }
+    if (deletePass !== '#admin') { setDeletePassErr('Senha incorreta.'); return }
     setDeleteModal(false)
     setLoading(true)
     try {
@@ -84,7 +90,34 @@ export default function OrcamentoDetalhe() {
 
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
-      {/* Header — oculto na impressão */}
+
+      {/* ── Cabeçalho de impressão (só no PDF/impressão) ──────────────────────── */}
+      <div className="hidden print:block mb-4">
+        <div className="flex justify-between items-start gap-4 pb-4 border-b-2 border-brand-black">
+          {/* Empresa */}
+          <div>
+            <p className="text-lg font-bold text-brand-black">{configuracoes?.nome ?? ''}</p>
+            {configuracoes?.cnpj     && <p className="text-xs text-gray-600">CNPJ: {formatCnpj(configuracoes.cnpj)}</p>}
+            {configuracoes?.endereco && (
+              <p className="text-xs text-gray-600">
+                {configuracoes.endereco}
+                {configuracoes?.cep ? ` — CEP ${formatCep(configuracoes.cep)}` : ''}
+              </p>
+            )}
+            {configuracoes?.telefone && <p className="text-xs text-gray-600">Tel: {configuracoes.telefone}</p>}
+          </div>
+          {/* Número e data */}
+          <div className="text-right shrink-0">
+            <p className="text-2xl font-bold text-brand-black">
+              Orçamento #{String(orcamento.numero).padStart(4, '0')}
+            </p>
+            <p className="text-xs text-gray-500">{formatDatetime(orcamento.createdAt)}</p>
+            {tipoLabel && <p className="text-xs text-gray-500 mt-0.5">{tipoLabel}</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Header tela ───────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 no-print">
         <button onClick={() => navigate('/')} className="p-2 rounded-lg hover:bg-brand-gray-border transition-colors">
           <ChevronLeft size={20} />
@@ -95,29 +128,22 @@ export default function OrcamentoDetalhe() {
               Orçamento #{String(orcamento.numero).padStart(4, '0')}
             </h1>
             <span className={statusClass(orcamento.status)}>{statusLabel(orcamento.status)}</span>
+            {tipoLabel && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-brand-yellow-light text-brand-yellow-dark">
+                {tipoLabel}
+              </span>
+            )}
           </div>
           <p className="text-sm text-brand-gray-light">{formatDatetime(orcamento.createdAt)}</p>
         </div>
       </div>
 
-      {/* Cabeçalho só na impressão */}
-      <div className="hidden print:block mb-2">
-        <h1 className="text-2xl font-bold text-brand-black">
-          Orçamento #{String(orcamento.numero).padStart(4, '0')}
-        </h1>
-        <p className="text-sm text-gray-500">{formatDatetime(orcamento.createdAt)}</p>
-      </div>
-
-      {/* Ações — ocultas na impressão */}
+      {/* ── Ações — ocultas na impressão ─────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 no-print">
         {['rascunho','em_analise'].includes(orcamento.status) && (
           <>
-            <Button onClick={() => setConfirm('aprovar')} variant="primary" size="sm">
-              <CheckCircle size={15} /> Aprovar
-            </Button>
-            <Button onClick={() => setConfirm('reprovar')} variant="secondary" size="sm">
-              <XCircle size={15} /> Reprovar
-            </Button>
+            <Button onClick={() => setConfirm('aprovar')}  variant="primary"   size="sm"><CheckCircle size={15} /> Aprovar</Button>
+            <Button onClick={() => setConfirm('reprovar')} variant="secondary" size="sm"><XCircle    size={15} /> Reprovar</Button>
           </>
         )}
         {orcamento.status === 'aprovado' && (
@@ -140,7 +166,7 @@ export default function OrcamentoDetalhe() {
         </Button>
       </div>
 
-      {/* Cliente / Carro */}
+      {/* ── Cliente / Carro ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="card p-4">
           <p className="text-xs text-brand-gray-light uppercase tracking-wide font-medium mb-2">Cliente</p>
@@ -166,13 +192,53 @@ export default function OrcamentoDetalhe() {
         </div>
       </div>
 
-      {/* Peças */}
+      {/* ── Troca de óleo (mecânica) — aparece em tela E impressão ───────────── */}
+      {isMecanica && orcamento.mecanica && (
+        <div className="card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Wrench size={14} className="text-brand-yellow-dark" />
+            <p className="text-xs text-brand-gray-light uppercase tracking-wide font-medium">Troca de Óleo</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {(orcamento.mecanica.ultimaTrocaData || orcamento.mecanica.ultimaTrocaKm) && (
+              <div>
+                <p className="text-xs text-brand-gray-light mb-0.5">Última troca</p>
+                <p className="text-sm font-medium text-brand-black">
+                  {orcamento.mecanica.ultimaTrocaData
+                    ? formatDateLocal(orcamento.mecanica.ultimaTrocaData)
+                    : ''}
+                  {orcamento.mecanica.ultimaTrocaData && orcamento.mecanica.ultimaTrocaKm ? ' · ' : ''}
+                  {orcamento.mecanica.ultimaTrocaKm
+                    ? `${Number(orcamento.mecanica.ultimaTrocaKm).toLocaleString('pt-BR')} km`
+                    : ''}
+                </p>
+              </div>
+            )}
+            {(orcamento.mecanica.proximaTrocaData || orcamento.mecanica.proximaTrocaKm) && (
+              <div>
+                <p className="text-xs text-brand-gray-light mb-0.5">Próxima troca</p>
+                <p className="text-sm font-bold text-brand-black">
+                  {orcamento.mecanica.proximaTrocaData
+                    ? formatDateLocal(orcamento.mecanica.proximaTrocaData)
+                    : ''}
+                  {orcamento.mecanica.proximaTrocaData && orcamento.mecanica.proximaTrocaKm ? ' · ' : ''}
+                  {orcamento.mecanica.proximaTrocaKm
+                    ? `${Number(orcamento.mecanica.proximaTrocaKm).toLocaleString('pt-BR')} km`
+                    : ''}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Peças ─────────────────────────────────────────────────────────────── */}
       {orcamento.itens?.pecas?.length > 0 && (
         <div className="card p-4">
           <p className="text-xs text-brand-gray-light uppercase tracking-wide font-medium mb-3">Peças / Produtos</p>
           <div className="flex flex-col divide-y divide-brand-gray-border">
             {orcamento.itens.pecas.map((item, i) => (
-              <PecaLine key={i} item={item} markup={markup} />
+              <PecaLine key={i} item={item} markup={markup} fornecedores={fornecedores} />
             ))}
           </div>
           {/* Detalhes de markup — oculto na impressão */}
@@ -187,14 +253,14 @@ export default function OrcamentoDetalhe() {
               <span>Total peças</span><span>{formatCurrency(t.totalPecas)}</span>
             </div>
           </div>
-          {/* Total peças apenas para impressão */}
+          {/* Total peças apenas na impressão */}
           <div className="mt-3 pt-3 border-t border-brand-gray-border hidden print:flex justify-between text-sm font-semibold text-brand-black">
             <span>Total peças</span><span>{formatCurrency(t.totalPecas)}</span>
           </div>
         </div>
       )}
 
-      {/* Serviços (era Mão de Obra) */}
+      {/* ── Serviços ──────────────────────────────────────────────────────────── */}
       {orcamento.itens?.servicos?.length > 0 && (
         <div className="card p-4">
           <p className="text-xs text-brand-gray-light uppercase tracking-wide font-medium mb-3">Serviços</p>
@@ -207,7 +273,7 @@ export default function OrcamentoDetalhe() {
         </div>
       )}
 
-      {/* Total */}
+      {/* ── Total ─────────────────────────────────────────────────────────────── */}
       <div className="card p-4 flex flex-col gap-2">
         {t.rastreamento > 0 && (
           <div className="flex justify-between text-sm text-brand-gray-light">
@@ -223,7 +289,7 @@ export default function OrcamentoDetalhe() {
         )}
       </div>
 
-      {/* Modal senha para excluir */}
+      {/* ── Modal senha para excluir ───────────────────────────────────────────── */}
       <Modal open={deleteModal} onClose={() => setDeleteModal(false)} title="Confirmar exclusão">
         <div className="flex flex-col gap-4">
           <p className="text-sm text-brand-gray-light">
@@ -253,13 +319,14 @@ export default function OrcamentoDetalhe() {
         </div>
       </Modal>
 
-      {/* Confirm dialogs */}
       <ConfirmDialog open={confirm === 'aprovar'}  onClose={() => setConfirm(null)} onConfirm={handleAprovar}  title="Aprovar orçamento?"  message="O orçamento será marcado como aprovado." />
       <ConfirmDialog open={confirm === 'reprovar'} onClose={() => setConfirm(null)} onConfirm={handleReprovar} title="Reprovar orçamento?" message="O orçamento será marcado como reprovado." danger />
       <ConfirmDialog open={confirm === 'concluir'} onClose={() => setConfirm(null)} onConfirm={handleConcluir} title="Concluir orçamento?" message="O orçamento será marcado como concluído." />
     </div>
   )
 }
+
+// ── Sub-componentes ──────────────────────────────────────────────────────────
 
 function ItemLine({ item }) {
   const qty   = Number(item.quantidade) || 1
@@ -275,21 +342,35 @@ function ItemLine({ item }) {
   )
 }
 
-function PecaLine({ item, markup = 0 }) {
-  const qty        = Number(item.quantidade) || 1
-  const custo      = (Number(item.valor) || 0) * qty
-  const comMarkup  = custo * (1 + markup / 100)
+function PecaLine({ item, markup = 0, fornecedores = [] }) {
+  const qty       = Number(item.quantidade) || 1
+  const custo     = (Number(item.valor) || 0) * qty
+  const comMarkup = custo * (1 + markup / 100)
+
+  const fornecedor = item.fornecedorId
+    ? fornecedores.find((f) => f.id === item.fornecedorId)
+    : null
+
   return (
-    <div className="flex items-center justify-between py-2.5 gap-2">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-brand-black truncate">{item.descricao || '-'}</p>
-        {item.marca && <p className="text-xs text-brand-gray-light">{item.marca}</p>}
-        {qty > 1 && <p className="text-xs text-brand-gray-light">{qty}x</p>}
+    <div className="py-2.5 gap-1 flex flex-col">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-brand-black truncate">{item.descricao || '-'}</p>
+          {item.marca && <p className="text-xs text-brand-gray-light">{item.marca}</p>}
+          {qty > 1    && <p className="text-xs text-brand-gray-light">{qty}x</p>}
+        </div>
+        {/* Tela: custo */}
+        <p className="screen-price text-sm font-medium text-brand-black whitespace-nowrap">{formatCurrency(custo)}</p>
+        {/* Impressão: preço com acréscimo */}
+        <p className="print-price hidden text-sm font-medium text-brand-black whitespace-nowrap">{formatCurrency(comMarkup)}</p>
       </div>
-      {/* Tela: mostra custo */}
-      <p className="screen-price text-sm font-medium text-brand-black whitespace-nowrap">{formatCurrency(custo)}</p>
-      {/* Impressão: mostra preço final com acréscimo */}
-      <p className="print-price hidden text-sm font-medium text-brand-black whitespace-nowrap">{formatCurrency(comMarkup)}</p>
+      {/* Campos admin — só na tela, nunca no PDF */}
+      {(fornecedor || item.dataCompra) && (
+        <div className="no-print flex items-center gap-3 mt-0.5">
+          {fornecedor  && <span className="text-[11px] text-brand-gray-light bg-brand-gray-border rounded px-1.5 py-0.5">{fornecedor.nome}</span>}
+          {item.dataCompra && <span className="text-[11px] text-brand-gray-light">Compra: {formatDateLocal(item.dataCompra)}</span>}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import {
-  collection, doc, getDocs, getDoc, addDoc,
+  collection, doc, getDocs, getDoc, addDoc, setDoc,
   updateDoc, deleteDoc, query, orderBy, limit,
   startAfter, serverTimestamp,
 } from 'firebase/firestore'
@@ -159,6 +159,31 @@ export const updateOrcamento = (id, data) =>
 
 export const atualizarStatus = (id, status, extraFields = {}) =>
   update('orcamentos', id, { status, ...extraFields })
+
+// ── Fornecedores ──────────────────────────────────────────────────────────────
+
+export const getFornecedores  = () => getAll('fornecedores')
+export const createFornecedor  = (data) => create('fornecedores', data)
+export const updateFornecedor  = (id, data) => update('fornecedores', id, data)
+export const deleteFornecedor  = (id) => remove('fornecedores', id)
+
+// ── Configurações da empresa ──────────────────────────────────────────────────
+
+const CONFIG_DOC = 'empresa'
+
+export const getConfiguracoes = async () => {
+  const snap = await withTimeout(getDoc(doc(db, 'configuracoes', CONFIG_DOC)))
+  return snap.exists() ? snap.data() : null
+}
+
+export const saveConfiguracoes = async (data) => {
+  await withTimeout(
+    setDoc(doc(db, 'configuracoes', CONFIG_DOC), {
+      ...data,
+      updatedAt: serverTimestamp(),
+    }, { merge: true })
+  )
+}
 
 // ── Usuários ──────────────────────────────────────────────────────────────────
 

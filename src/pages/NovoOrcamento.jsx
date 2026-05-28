@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2, ChevronLeft, UserPlus, Car as CarIcon, Info, Search, X } from 'lucide-react'
+import { Plus, Trash2, ChevronLeft, UserPlus, Car as CarIcon, Info, Wrench, Palette } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -8,108 +8,54 @@ import { useLogger } from '../hooks/useLogger'
 import * as svc from '../firebase/services'
 import { formatCurrency, calcTotals } from '../utils/helpers'
 import Button from '../components/ui/Button'
-import Input, { Select } from '../components/ui/Input'
+import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
+import SearchSelect from '../components/ui/SearchSelect'
 
-const emptyPeca    = () => ({ marca: '', descricao: '', valor: '', quantidade: 1 })
+const emptyPeca    = () => ({ marca: '', descricao: '', valor: '', quantidade: 1, fornecedorId: '', dataCompra: '' })
 const emptyServico = () => ({ descricao: '', valor: '', quantidade: 1 })
 
-// ── Componente de busca com autocomplete ──────────────────────────────────────
-function SearchSelect({ label, items, value, onChange, getLabel, getKey, getSub, placeholder, error }) {
-  const [query,  setQuery]  = useState('')
-  const [open,   setOpen]   = useState(false)
-  const ref = useRef(null)
+const emptyMecanica = () => ({
+  ultimaTrocaData: '',
+  ultimaTrocaKm:   '',
+  proximaTrocaData: '',
+  proximaTrocaKm:  '',
+})
 
-  const selected = items.find((i) => getKey(i) === value)
-
-  const filtered = useMemo(() => {
-    const term = query.toLowerCase()
-    return items.filter((i) =>
-      getLabel(i).toLowerCase().includes(term) ||
-      getSub?.(i)?.toLowerCase().includes(term)
-    ).slice(0, 8)
-  }, [items, query])
-
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const handleSelect = (item) => {
-    onChange(getKey(item))
-    setQuery('')
-    setOpen(false)
-  }
-
-  const handleClear = () => { onChange(''); setQuery(''); setOpen(false) }
-
-  return (
-    <div className="flex flex-col gap-1" ref={ref}>
-      <label className="text-sm font-medium text-brand-black">{label}</label>
-      <div className="relative">
-        {selected ? (
-          <div className={`input-field flex items-center justify-between gap-2 cursor-default ${error ? 'border-red-400' : ''}`}>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-brand-black truncate">{getLabel(selected)}</p>
-              {getSub && <p className="text-xs text-brand-gray-light truncate">{getSub(selected)}</p>}
-            </div>
-            <button type="button" onClick={handleClear} className="shrink-0 text-brand-gray-light hover:text-red-500 transition-colors">
-              <X size={15} />
-            </button>
-          </div>
-        ) : (
-          <>
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray-light pointer-events-none" />
-            <input
-              value={query}
-              onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
-              onFocus={() => setOpen(true)}
-              placeholder={placeholder}
-              className={`input-field pl-9 ${error ? 'border-red-400' : ''}`}
-            />
-          </>
-        )}
-
-        {open && !selected && filtered.length > 0 && (
-          <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white border border-brand-gray-border rounded-xl shadow-lg overflow-hidden">
-            {filtered.map((item) => (
-              <button
-                key={getKey(item)}
-                type="button"
-                onMouseDown={() => handleSelect(item)}
-                className="w-full text-left px-4 py-2.5 hover:bg-brand-yellow-light transition-colors flex flex-col"
-              >
-                <span className="text-sm font-medium text-brand-black">{getLabel(item)}</span>
-                {getSub && <span className="text-xs text-brand-gray-light">{getSub(item)}</span>}
-              </button>
-            ))}
-          </div>
-        )}
-        {open && !selected && query.length > 0 && filtered.length === 0 && (
-          <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white border border-brand-gray-border rounded-xl shadow-lg px-4 py-3 text-sm text-brand-gray-light">
-            Nenhum resultado para "{query}"
-          </div>
-        )}
-      </div>
-      {error && <p className="text-xs text-red-500">{error}</p>}
-    </div>
-  )
-}
+// ── Tipos de orçamento ────────────────────────────────────────────────────────
+const TIPOS = [
+  {
+    id:    'mecanica',
+    label: 'Mecânica',
+    sub:   'Troca de óleo, freios, suspensão, motor...',
+    icon:  Wrench,
+  },
+  {
+    id:    'funilaria',
+    label: 'Funilaria & Estética',
+    sub:   'Pintura, funilaria, lavagem, polimento...',
+    icon:  Palette,
+  },
+]
 
 export default function NovoOrcamento() {
   const navigate = useNavigate()
-  const { clientes, carros, servicos, pecas, addOrcamento, addCliente, addCarro } = useApp()
+  const { clientes, carros, servicos, pecas, fornecedores, addOrcamento, addCliente, addCarro } = useApp()
   const { user } = useAuth()
-  const toast = useToast()
+  const toast  = useToast()
   const logger = useLogger()
 
+  // Step 1: seleção do tipo
+  const [tipoServico, setTipoServico] = useState(null) // null | 'mecanica' | 'funilaria'
+
+  // Step 2: form
   const [clienteId,     setClienteId]     = useState('')
   const [carroId,       setCarroId]       = useState('')
   const [servicosItens, setServicosItens] = useState([emptyServico()])
   const [pecasItens,    setPecasItens]    = useState([emptyPeca()])
   const [markup,        setMarkup]        = useState(20)
   const [rastreamento,  setRastreamento]  = useState('')
+  const [mecanica,      setMecanica]      = useState(emptyMecanica())
   const [loading,       setLoading]       = useState(false)
   const [errors,        setErrors]        = useState({})
 
@@ -138,6 +84,22 @@ export default function NovoOrcamento() {
   const addItem    = (setList, empty) => setList((prev) => [...prev, empty()])
   const removeItem = (setList, index) => setList((prev) => prev.filter((_, i) => i !== index))
 
+  // Troca de óleo: auto-calcula próxima data (+6 meses) e km (+7000)
+  const handleMecanicaChange = (field, value) => {
+    setMecanica((prev) => {
+      const updated = { ...prev, [field]: value }
+      if (field === 'ultimaTrocaData' && value) {
+        const d = new Date(value + 'T12:00:00')
+        d.setMonth(d.getMonth() + 6)
+        updated.proximaTrocaData = d.toISOString().split('T')[0]
+      }
+      if (field === 'ultimaTrocaKm' && value) {
+        updated.proximaTrocaKm = String((Number(value) || 0) + 7000)
+      }
+      return updated
+    })
+  }
+
   const validate = () => {
     const e = {}
     if (!clienteId) e.clienteId = 'Selecione um cliente'
@@ -165,6 +127,8 @@ export default function NovoOrcamento() {
         carroId,
         itens,
         extras,
+        tipoServico,
+        ...(tipoServico === 'mecanica' ? { mecanica } : {}),
         clienteNome:         cliente?.nome  ?? '',
         veiculoModelo:       carro?.nome    ?? '',
         veiculoPlaca:        carro?.placa   ?? '',
@@ -191,7 +155,6 @@ export default function NovoOrcamento() {
 
   const handleSaveCliente = async () => {
     if (!newCliente.nome) { toast.error('Informe o nome do cliente.'); return }
-    // Valida celular duplicado
     if (newCliente.celular) {
       const cel = newCliente.celular.replace(/\D/g, '')
       const dup = clientes.find((c) => c.celular?.replace(/\D/g, '') === cel && cel.length >= 8)
@@ -234,15 +197,56 @@ export default function NovoOrcamento() {
     } finally { setSavingModal(false) }
   }
 
+  // ── Tela 1: seleção do tipo ──────────────────────────────────────────────────
+  if (!tipoServico) {
+    return (
+      <div className="flex flex-col gap-6 max-w-xl">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/')} className="p-2 rounded-lg hover:bg-brand-gray-border transition-colors">
+            <ChevronLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-brand-black">Novo Orçamento</h1>
+            <p className="text-sm text-brand-gray-light">Selecione o tipo de serviço</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {TIPOS.map(({ id, label, sub, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setTipoServico(id)}
+              className="card p-7 flex flex-col items-center gap-3 text-center hover:border-brand-yellow border-2 border-transparent transition-all active:scale-95"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-brand-yellow-light flex items-center justify-center">
+                <Icon size={28} className="text-brand-yellow-dark" />
+              </div>
+              <p className="font-bold text-brand-black text-base">{label}</p>
+              <p className="text-xs text-brand-gray-light leading-relaxed">{sub}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Tela 2: formulário ───────────────────────────────────────────────────────
+  const tipoLabel = TIPOS.find((t) => t.id === tipoServico)?.label ?? tipoServico
+
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/')} className="p-2 rounded-lg hover:bg-brand-gray-border transition-colors">
+        <button onClick={() => setTipoServico(null)} className="p-2 rounded-lg hover:bg-brand-gray-border transition-colors">
           <ChevronLeft size={20} />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-brand-black">Novo Orçamento</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-brand-black">Novo Orçamento</h1>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-brand-yellow-light text-brand-yellow-dark">
+              {tipoLabel}
+            </span>
+          </div>
           <p className="text-sm text-brand-gray-light">Preencha os dados do orçamento</p>
         </div>
       </div>
@@ -290,6 +294,47 @@ export default function NovoOrcamento() {
           </div>
         </div>
 
+        {/* Mecânica: troca de óleo */}
+        {tipoServico === 'mecanica' && (
+          <div className="card p-4 flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <Wrench size={15} className="text-brand-yellow-dark" />
+              <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black">Troca de Óleo</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Última troca — data"
+                type="date"
+                value={mecanica.ultimaTrocaData}
+                onChange={(e) => handleMecanicaChange('ultimaTrocaData', e.target.value)}
+              />
+              <Input
+                label="Última troca — km"
+                type="number"
+                value={mecanica.ultimaTrocaKm}
+                onChange={(e) => handleMecanicaChange('ultimaTrocaKm', e.target.value)}
+                placeholder="Ex: 45000"
+              />
+              <Input
+                label="Próxima troca — data"
+                type="date"
+                value={mecanica.proximaTrocaData}
+                onChange={(e) => handleMecanicaChange('proximaTrocaData', e.target.value)}
+              />
+              <Input
+                label="Próxima troca — km"
+                type="number"
+                value={mecanica.proximaTrocaKm}
+                onChange={(e) => handleMecanicaChange('proximaTrocaKm', e.target.value)}
+                placeholder="Ex: 52000"
+              />
+            </div>
+            <p className="text-xs text-brand-gray-light">
+              Próxima troca calculada automaticamente (+6 meses / +7.000 km). Pode editar.
+            </p>
+          </div>
+        )}
+
         {/* Peças */}
         <div className="card p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -315,7 +360,7 @@ export default function NovoOrcamento() {
           </div>
           {pecasItens.map((item, i) => (
             <PecaRow
-              key={i} item={item} catalog={pecas} markup={markup}
+              key={i} item={item} catalog={pecas} markup={markup} fornecedores={fornecedores}
               onChange={(field, val) => updateItem(pecasItens, setPecasItens, i, field, val)}
               onRemove={() => removeItem(setPecasItens, i)}
               canRemove={pecasItens.length > 1}
@@ -387,7 +432,7 @@ export default function NovoOrcamento() {
         </div>
 
         <div className="flex gap-3 pb-4">
-          <Button variant="secondary" type="button" className="flex-1 justify-center" onClick={() => navigate('/')}>
+          <Button variant="secondary" type="button" className="flex-1 justify-center" onClick={() => setTipoServico(null)}>
             Cancelar
           </Button>
           <Button type="submit" className="flex-1 justify-center" loading={loading}>
@@ -428,7 +473,9 @@ export default function NovoOrcamento() {
   )
 }
 
-function PecaRow({ item, catalog, markup, onChange, onRemove, canRemove }) {
+// ── Sub-componentes ──────────────────────────────────────────────────────────
+
+function PecaRow({ item, catalog, markup, fornecedores, onChange, onRemove, canRemove }) {
   const custo = (Number(item.valor) || 0) * (Number(item.quantidade) || 1)
   const total = custo * (1 + (Number(markup) || 0) / 100)
   return (
@@ -441,14 +488,40 @@ function PecaRow({ item, catalog, markup, onChange, onRemove, canRemove }) {
         {canRemove && <button type="button" onClick={onRemove} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={15} /></button>}
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <input value={item.marca}      onChange={(e) => onChange('marca', e.target.value)}      placeholder="Marca (ex: NGK, Bosch...)"  className="input-field col-span-2" />
-        <input value={item.descricao}  onChange={(e) => onChange('descricao', e.target.value)}  placeholder="Descrição da peça"          className="input-field col-span-2" />
-        <input type="number" value={item.quantidade} onChange={(e) => onChange('quantidade', e.target.value)} placeholder="Qtd"        min={1} className="input-field" />
+        <input value={item.marca}     onChange={(e) => onChange('marca', e.target.value)}     placeholder="Marca (ex: NGK, Bosch...)" className="input-field col-span-2" />
+        <input value={item.descricao} onChange={(e) => onChange('descricao', e.target.value)} placeholder="Descrição da peça"         className="input-field col-span-2" />
+        <input type="number" value={item.quantidade} onChange={(e) => onChange('quantidade', e.target.value)} placeholder="Qtd"       min={1}    className="input-field" />
         <input type="number" value={item.valor}      onChange={(e) => onChange('valor', e.target.value)}      placeholder="Custo unit." step="0.01" className="input-field" />
       </div>
       <div className="flex items-center justify-between text-xs bg-brand-yellow-light rounded px-2 py-1.5">
         <span className="text-brand-yellow-dark">Custo: {formatCurrency(custo)} + {markup}% = </span>
         <span className="font-bold text-brand-black">{formatCurrency(total)}</span>
+      </div>
+      {/* Campos administrativos (não saem no PDF do cliente) */}
+      <div className="border-t border-dashed border-brand-gray-border pt-2 flex flex-col gap-2">
+        <p className="text-[10px] font-semibold text-brand-gray-light uppercase tracking-wide">Administrativo — não aparece no orçamento do cliente</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="col-span-2">
+            <SearchSelect
+              items={fornecedores}
+              value={item.fornecedorId || ''}
+              onChange={(val) => onChange('fornecedorId', val)}
+              getKey={(f) => f.id}
+              getLabel={(f) => f.nome}
+              getSub={(f) => f.cidade}
+              placeholder="Fornecedor / loja..."
+            />
+          </div>
+          <div className="col-span-2 flex flex-col gap-1">
+            <label className="text-sm font-medium text-brand-black">Data da compra</label>
+            <input
+              type="date"
+              value={item.dataCompra || ''}
+              onChange={(e) => onChange('dataCompra', e.target.value)}
+              className="input-field"
+            />
+          </div>
+        </div>
       </div>
     </div>
   )
