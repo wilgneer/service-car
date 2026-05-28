@@ -55,7 +55,7 @@ export default function Sidebar() {
             <Car size={16} className="text-brand-black" />
           </div>
           <div>
-            <p className="text-white font-bold text-sm leading-tight">AutoOrçamento</p>
+            <p className="text-white font-bold text-sm leading-tight">Setcar</p>
             {isAdmin && (
               <span className="inline-flex items-center gap-1 text-xs text-brand-yellow">
                 <Shield size={10} /> Admin
@@ -109,7 +109,7 @@ export default function Sidebar() {
           <div className="w-7 h-7 bg-brand-yellow rounded-lg flex items-center justify-center">
             <Car size={14} className="text-brand-black" />
           </div>
-          <span className="text-white font-bold text-sm">AutoOrçamento</span>
+          <span className="text-white font-bold text-sm">Setcar</span>
           {isAdmin && <span className="text-xs text-brand-yellow ml-1 flex items-center gap-0.5"><Shield size={9} /> Admin</span>}
         </div>
         <button onClick={() => setDrawerOpen(true)} className="text-white p-1">
