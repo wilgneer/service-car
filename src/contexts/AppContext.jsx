@@ -112,23 +112,31 @@ export function AppProvider({ children }) {
       console.error('[AppContext] Firestore inacessível. Verifique as Security Rules e a conexão.')
     }
     try {
-      const [c, ca, s, p, oResult, forn, cfg, mat] = await Promise.all([
+      // Coleções principais — regras já implantadas
+      const [c, ca, s, p, oResult] = await Promise.all([
         svc.getClientes(),
         svc.getCarros(),
         svc.getServicos(),
         svc.getPecas(),
         svc.getOrcamentos(50),
-        svc.getFornecedores(),
-        svc.getConfiguracoes(),
-        svc.getMateriais(),
       ])
       setClientes(c); setCarros(ca); setServicos(s); setPecas(p)
       setOrcamentos(oResult.items)
       setOrcamentosLastDoc(oResult.lastDoc)
       setOrcamentosHasMore(oResult.hasMore)
-      setFornecedores(forn)
-      setMateriais(mat)
-      if (cfg) setConfiguracoes((prev) => ({ ...prev, ...cfg }))
+
+      // Novas coleções — falham silenciosamente até as regras serem implantadas
+      const [fornResult, cfgResult, matResult] = await Promise.allSettled([
+        svc.getFornecedores(),
+        svc.getConfiguracoes(),
+        svc.getMateriais(),
+      ])
+      if (fornResult.status === 'fulfilled') setFornecedores(fornResult.value)
+      else console.warn('[AppContext] fornecedores sem permissão — atualize as Firestore Rules.')
+      if (cfgResult.status === 'fulfilled' && cfgResult.value) setConfiguracoes((prev) => ({ ...prev, ...cfgResult.value }))
+      else console.warn('[AppContext] configuracoes sem permissão — atualize as Firestore Rules.')
+      if (matResult.status === 'fulfilled') setMateriais(matResult.value)
+      else console.warn('[AppContext] materiais sem permissão — atualize as Firestore Rules.')
     } catch (err) {
       console.error('[AppContext] Falha ao carregar dados do Firestore:', err?.message ?? err)
     } finally {
@@ -160,18 +168,20 @@ export function AppProvider({ children }) {
   const refresh = useCallback(async () => {
     if (isDemo) return
     try {
-      const [c, ca, s, p, oResult, forn, cfg, mat] = await Promise.all([
+      const [c, ca, s, p, oResult] = await Promise.all([
         svc.getClientes(), svc.getCarros(), svc.getServicos(),
         svc.getPecas(), svc.getOrcamentos(50),
-        svc.getFornecedores(), svc.getConfiguracoes(), svc.getMateriais(),
       ])
       setClientes(c); setCarros(ca); setServicos(s); setPecas(p)
       setOrcamentos(oResult.items)
       setOrcamentosLastDoc(oResult.lastDoc)
       setOrcamentosHasMore(oResult.hasMore)
-      setFornecedores(forn)
-      setMateriais(mat)
-      if (cfg) setConfiguracoes((prev) => ({ ...prev, ...cfg }))
+      const [fornR, cfgR, matR] = await Promise.allSettled([
+        svc.getFornecedores(), svc.getConfiguracoes(), svc.getMateriais(),
+      ])
+      if (fornR.status === 'fulfilled') setFornecedores(fornR.value)
+      if (cfgR.status === 'fulfilled' && cfgR.value) setConfiguracoes((prev) => ({ ...prev, ...cfgR.value }))
+      if (matR.status === 'fulfilled') setMateriais(matR.value)
     } catch { /* silencioso */ }
   }, [isDemo])
 
