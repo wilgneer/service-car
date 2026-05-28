@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Users, Plus, Edit, Trash2, Phone, Search, FileText, Clock } from 'lucide-react'
+import { Users, Plus, Edit, Trash2, Phone, Search, FileText, Clock, Car } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLogger } from '../hooks/useLogger'
@@ -13,7 +13,7 @@ import EmptyState from '../components/ui/EmptyState'
 const empty = () => ({ nome: '', celular: '' })
 
 export default function Clientes() {
-  const { clientes, orcamentos, addCliente, editCliente, dropCliente } = useApp()
+  const { clientes, carros, orcamentos, addCliente, editCliente, dropCliente } = useApp()
   const toast = useToast()
   const logger = useLogger()
   const [search,   setSearch]   = useState('')
@@ -126,6 +126,10 @@ export default function Clientes() {
                   <div className="flex items-center gap-1 text-xs text-brand-gray-light">
                     <FileText size={11} />
                     <span>{stats.count} orçamento{stats.count !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-brand-gray-light">
+                    <Car size={11} />
+                    <span>{carros.filter((v) => v.clienteId === c.id).length} veículo{carros.filter((v) => v.clienteId === c.id).length !== 1 ? 's' : ''}</span>
                   </div>
                   {stats.lastDate && (
                     <div className="flex items-center gap-1 text-xs text-brand-gray-light">

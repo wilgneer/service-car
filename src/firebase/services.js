@@ -192,6 +192,113 @@ export const saveConfiguracoes = async (data) => {
   )
 }
 
+// ── Assinatura digital do cliente ─────────────────────────────────────────────
+
+/**
+ * Cria um link de assinatura e coloca o orçamento em aguardando_assinatura.
+ * Chamado pelo admin. Requer autenticação.
+ */
+export const enviarParaAssinatura = async (orcamentoId, orcamento) => {
+  const token = crypto.randomUUID()
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 dias
+
+  // Snapshot para a página pública — sem dados sensíveis
+  const snapshot = {
+    numero:        orcamento.numero ?? 0,
+    clienteNome:   orcamento.clienteNome ?? '',
+    veiculoModelo: orcamento.veiculoModelo ?? '',
+    veiculoPlaca:  orcamento.veiculoPlaca ?? '',
+    veiculoAno:    orcamento.veiculoAno ?? '',
+    tipoServico:   orcamento.tipoServico ?? '',
+    totalGeral:    orcamento.totalGeral ?? orcamento.total ?? 0,
+    totalMaoDeObra:      orcamento.totalMaoDeObra ?? 0,
+    totalPecas:          orcamento.totalPecas ?? 0,
+    rastreamento:        orcamento.rastreamento ?? 0,
+    itens: {
+      servicos: (orcamento.itens?.servicos ?? []).map(({ descricao, valor, quantidade }) => ({ descricao, valor, quantidade })),
+      pecas:    (orcamento.itens?.pecas    ?? []).map(({ marca, descricao, valor, quantidade }) => ({ marca, descricao, valor, quantidade })),
+    },
+    extras: { markup: orcamento.extras?.markup ?? 20 },
+  }
+
+  // Cria documento de assinatura (leitura pública, escrita só via token)
+  await withTimeout(
+    setDoc(doc(db, 'assinaturas', token), {
+      orcamentoId,
+      token,
+      status:    'pendente',
+      expiresAt,
+      createdAt: serverTimestamp(),
+      snapshot,
+    })
+  )
+
+  // Atualiza orçamento
+  await withTimeout(
+    updateDoc(doc(db, 'orcamentos', orcamentoId), {
+      status:                    'aguardando_assinatura',
+      assinaturaToken:           token,
+      enviadoParaAssinaturaEm:   serverTimestamp(),
+      updatedAt:                 serverTimestamp(),
+    })
+  )
+
+  return token
+}
+
+/**
+ * Lê o documento de assinatura pelo token — público, sem autenticação.
+ */
+export const getAssinaturaByToken = async (token) => {
+  const snap = await withTimeout(getDoc(doc(db, 'assinaturas', token)), 10000)
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null
+}
+
+/**
+ * O cliente assina o orçamento — sem autenticação.
+ * Atualiza assinaturas/{token} e depois orcamentos/{id}.
+ * A regra do Firestore valida que o token bate antes de permitir o update.
+ */
+export const assinarOrcamento = async (token, { nomeConfirmado, telefoneUltimos4, ipMascarado, userAgent }) => {
+  const assinaturaRef  = doc(db, 'assinaturas', token)
+  const assinaturaSnap = await withTimeout(getDoc(assinaturaRef), 10000)
+
+  if (!assinaturaSnap.exists()) throw new Error('Link de assinatura não encontrado.')
+
+  const assinaturaDoc = assinaturaSnap.data()
+  if (assinaturaDoc.status !== 'pendente') throw new Error('Este orçamento já foi assinado.')
+
+  const expira = assinaturaDoc.expiresAt?.toDate
+    ? assinaturaDoc.expiresAt.toDate()
+    : new Date(assinaturaDoc.expiresAt)
+  if (new Date() > expira) throw new Error('Este link de assinatura expirou. Solicite um novo ao responsável.')
+
+  const assinadoEm = new Date().toISOString()
+
+  // 1) Marca a assinatura como assinada
+  await withTimeout(
+    updateDoc(assinaturaRef, {
+      status: 'assinado',
+      nomeConfirmado,
+      telefoneUltimos4,
+      ipMascarado,
+      userAgent,
+      assinadoEm: serverTimestamp(),
+    })
+  )
+
+  // 2) Aprova o orçamento (Firestore Rule valida token + campos permitidos)
+  const orcRef = doc(db, 'orcamentos', assinaturaDoc.orcamentoId)
+  await withTimeout(
+    updateDoc(orcRef, {
+      status:      'aprovado',
+      aprovadoEm:  assinadoEm,
+      assinatura:  { nomeConfirmado, telefoneUltimos4, ipMascarado, assinadoEm },
+      updatedAt:   serverTimestamp(),
+    })
+  )
+}
+
 // ── Usuários ──────────────────────────────────────────────────────────────────
 
 export const getUserProfile = (uid) => getById('usuarios', uid)

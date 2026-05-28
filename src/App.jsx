@@ -20,6 +20,7 @@ const Relatorios      = lazy(() => import('./pages/Relatorios'))
 const Logs            = lazy(() => import('./pages/Logs'))
 const Fornecedores    = lazy(() => import('./pages/Fornecedores'))
 const Configuracoes   = lazy(() => import('./pages/Configuracoes'))
+const AssinarOrcamento = lazy(() => import('./pages/AssinarOrcamento'))
 
 // ── Loading inline (dentro do layout, não substitui a tela toda) ──────────────
 function PageLoader() {
@@ -79,6 +80,12 @@ function AppRoutes() {
       <Route path="/logs"                    element={<PrivateRoute><Logs /></PrivateRoute>} />
       <Route path="/fornecedores"            element={<PrivateRoute><Fornecedores /></PrivateRoute>} />
       <Route path="/configuracoes"           element={<PrivateRoute><Configuracoes /></PrivateRoute>} />
+      {/* Rota pública — sem autenticação, cliente assina o orçamento */}
+      <Route path="/assinar/:token" element={
+        <Suspense fallback={<LoadingScreen />}>
+          <AssinarOrcamento />
+        </Suspense>
+      } />
       <Route path="*"                        element={<Navigate to="/" replace />} />
     </Routes>
   )

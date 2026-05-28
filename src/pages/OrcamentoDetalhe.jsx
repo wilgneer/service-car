@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Edit, Trash2, CheckCircle, XCircle, Printer, Car, Lock, Wrench, DollarSign } from 'lucide-react'
+import { ChevronLeft, Edit, Trash2, CheckCircle, XCircle, Printer, Car, Lock, Wrench, DollarSign, Send, Link2, Copy, Shield } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -27,6 +27,10 @@ export default function OrcamentoDetalhe() {
   const [deleteModal,   setDeleteModal]   = useState(false)
   const [deletePass,    setDeletePass]    = useState('')
   const [deletePassErr, setDeletePassErr] = useState('')
+  const [linkModal,     setLinkModal]     = useState(false)
+  const [sigLink,       setSigLink]       = useState('')
+  const [copied,        setCopied]        = useState(false)
+  const [sendingLink,   setSendingLink]   = useState(false)
 
   const orcamento = orcamentos.find((o) => o.id === id)
   const cliente   = clientes.find((c) => c.id === orcamento?.clienteId)
@@ -71,6 +75,40 @@ export default function OrcamentoDetalhe() {
   const handleReprovar = () => changeStatus('reprovado', { reprovadoEm: new Date().toISOString() }, 'Orçamento reprovado.', 'orcamento_reprovado')
   const handleConcluir = () => changeStatus('concluido', { concluidoEm: new Date().toISOString() }, 'Orçamento concluído!', 'orcamento_concluido')
   const handlePagar    = () => changeStatus('pago',      { pagoEm:      new Date().toISOString() }, 'Pagamento registrado!','orcamento_pago')
+
+  const handleEnviarAssinatura = async () => {
+    setSendingLink(true)
+    try {
+      const token = await svc.enviarParaAssinatura(id, orcamento)
+      editOrcamento(id, { status: 'aguardando_assinatura', assinaturaToken: token })
+      logger.activity('assinatura_enviada', `Link de assinatura gerado para orçamento #${String(orcamento.numero).padStart(4,'0')}`)
+      const link = `${window.location.origin}/assinar/${token}`
+      setSigLink(link)
+      setLinkModal(true)
+      toast.success('Link de assinatura gerado!')
+    } catch (err) {
+      logger.error('erro_assinatura', 'Erro ao gerar link de assinatura', { err: err?.message })
+      toast.error('Erro ao gerar link. Tente novamente.')
+    } finally { setSendingLink(false) }
+  }
+
+  const handleMostrarLink = () => {
+    const token = orcamento.assinaturaToken
+    if (token) {
+      setSigLink(`${window.location.origin}/assinar/${token}`)
+      setLinkModal(true)
+    }
+  }
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(sigLink)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('Não foi possível copiar. Copie manualmente.')
+    }
+  }
 
   const handlePrint = () => {
     const area = document.getElementById('print-area')
@@ -190,8 +228,28 @@ export default function OrcamentoDetalhe() {
       <div className="flex flex-wrap gap-2 no-print">
         {['rascunho','em_analise'].includes(orcamento.status) && (
           <>
-            <Button onClick={() => setConfirm('aprovar')}  variant="primary"   size="sm"><CheckCircle size={15} /> Aprovar</Button>
-            <Button onClick={() => setConfirm('reprovar')} variant="secondary" size="sm"><XCircle    size={15} /> Reprovar</Button>
+            <Button onClick={handleEnviarAssinatura} variant="primary" size="sm" loading={sendingLink}>
+              <Send size={15} /> Enviar para Assinatura
+            </Button>
+            {isAdmin && (
+              <Button onClick={() => setConfirm('aprovar')} variant="secondary" size="sm">
+                <CheckCircle size={15} /> Aprovar direto
+              </Button>
+            )}
+            <Button onClick={() => setConfirm('reprovar')} variant="secondary" size="sm"><XCircle size={15} /> Reprovar</Button>
+          </>
+        )}
+        {orcamento.status === 'aguardando_assinatura' && (
+          <>
+            <Button onClick={handleMostrarLink} variant="secondary" size="sm">
+              <Link2 size={15} /> Ver Link
+            </Button>
+            {isAdmin && (
+              <Button onClick={() => setConfirm('aprovar')} variant="secondary" size="sm">
+                <CheckCircle size={15} /> Aprovar direto
+              </Button>
+            )}
+            <Button onClick={() => setConfirm('reprovar')} variant="secondary" size="sm"><XCircle size={15} /> Reprovar</Button>
           </>
         )}
         {orcamento.status === 'aprovado' && (
@@ -326,6 +384,52 @@ export default function OrcamentoDetalhe() {
         </div>
       )}
 
+      {/* ── Assinatura digital ────────────────────────────────────────────────── */}
+      {orcamento.status === 'aguardando_assinatura' && (
+        <div className="card p-4 border-purple-200 bg-purple-50/50">
+          <div className="flex items-center gap-2 mb-2">
+            <Shield size={14} className="text-purple-500" />
+            <p className="text-xs text-purple-700 uppercase tracking-wide font-medium">Aguardando Assinatura do Cliente</p>
+          </div>
+          <p className="text-sm text-purple-600">
+            Um link de aprovação foi enviado. O orçamento só será aprovado após o cliente assinar.
+          </p>
+          <button
+            onClick={handleMostrarLink}
+            className="mt-3 flex items-center gap-1.5 text-sm font-medium text-purple-700 hover:text-purple-900 transition-colors"
+          >
+            <Link2 size={14} /> Ver / copiar link de assinatura
+          </button>
+        </div>
+      )}
+
+      {orcamento.assinatura && (
+        <div className="card p-4 border-green-200 bg-green-50/50">
+          <div className="flex items-center gap-2 mb-2">
+            <Shield size={14} className="text-green-600" />
+            <p className="text-xs text-green-700 uppercase tracking-wide font-medium">Assinatura Digital Registrada</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-xs text-brand-gray-light mb-0.5">Assinado por</p>
+              <p className="font-semibold text-brand-black">{orcamento.assinatura.nomeConfirmado}</p>
+            </div>
+            <div>
+              <p className="text-xs text-brand-gray-light mb-0.5">Data</p>
+              <p className="font-semibold text-brand-black">
+                {orcamento.assinatura.assinadoEm
+                  ? new Date(orcamento.assinatura.assinadoEm).toLocaleString('pt-BR')
+                  : formatDatetime(orcamento.aprovadoEm)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-brand-gray-light mb-0.5">IP (mascarado)</p>
+              <p className="font-mono text-xs text-brand-black">{orcamento.assinatura.ipMascarado}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Total ─────────────────────────────────────────────────────────────── */}
       <div className="card p-4 flex flex-col gap-2">
         {t.rastreamento > 0 && (
@@ -369,6 +473,33 @@ export default function OrcamentoDetalhe() {
               Excluir
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* ── Modal link de assinatura ──────────────────────────────────────────── */}
+      <Modal open={linkModal} onClose={() => setLinkModal(false)} title="Link de assinatura">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-brand-gray-light leading-relaxed">
+            Compartilhe este link com o cliente. Ele poderá revisar o orçamento e assinar para aprovar.
+            O link expira em <strong>7 dias</strong>.
+          </p>
+          <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-3 border border-gray-200">
+            <p className="flex-1 text-xs font-mono text-brand-black break-all select-all">{sigLink}</p>
+            <button
+              onClick={handleCopyLink}
+              className={`shrink-0 flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all ${
+                copied ? 'bg-green-100 text-green-700' : 'bg-brand-yellow text-brand-black hover:bg-yellow-400'
+              }`}
+            >
+              {copied ? <CheckCircle size={13} /> : <Copy size={13} />}
+              {copied ? 'Copiado!' : 'Copiar'}
+            </button>
+          </div>
+          <div className="flex items-start gap-2 text-xs text-gray-400">
+            <Shield size={12} className="shrink-0 mt-0.5" />
+            <span>O IP do cliente é mascarado automaticamente. Apenas os 2 primeiros grupos são registrados.</span>
+          </div>
+          <Button variant="secondary" className="justify-center" onClick={() => setLinkModal(false)}>Fechar</Button>
         </div>
       </Modal>
 
