@@ -134,7 +134,7 @@ export default function AssinarOrcamento() {
         )}
         <div className="flex items-center gap-2 text-xs text-gray-400 justify-center">
           <Shield size={12} />
-          <span>Assinatura registrada com segurança · IP mascarado</span>
+          <span>Assinatura registrada com segurança</span>
         </div>
       </div>
     </div>

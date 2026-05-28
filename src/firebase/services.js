@@ -202,23 +202,30 @@ export const enviarParaAssinatura = async (orcamentoId, orcamento) => {
   const token = crypto.randomUUID()
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 dias
 
+  // Busca dados frescos do Firestore — garante número e campos atualizados
+  let src = orcamento
+  try {
+    const freshSnap = await withTimeout(getDoc(doc(db, 'orcamentos', orcamentoId)), 8000)
+    if (freshSnap.exists()) src = { id: freshSnap.id, ...freshSnap.data() }
+  } catch { /* usa o objeto passado como fallback */ }
+
   // Snapshot para a página pública — sem dados sensíveis
   const snapshot = {
-    numero:        orcamento.numero ?? 0,
-    clienteNome:   orcamento.clienteNome ?? '',
-    veiculoModelo: orcamento.veiculoModelo ?? '',
-    veiculoPlaca:  orcamento.veiculoPlaca ?? '',
-    veiculoAno:    orcamento.veiculoAno ?? '',
-    tipoServico:   orcamento.tipoServico ?? '',
-    totalGeral:    orcamento.totalGeral ?? orcamento.total ?? 0,
-    totalMaoDeObra:      orcamento.totalMaoDeObra ?? 0,
-    totalPecas:          orcamento.totalPecas ?? 0,
-    rastreamento:        orcamento.rastreamento ?? 0,
+    numero:        src.numero ?? orcamento.numero ?? 0,
+    clienteNome:   src.clienteNome ?? '',
+    veiculoModelo: src.veiculoModelo ?? '',
+    veiculoPlaca:  src.veiculoPlaca ?? '',
+    veiculoAno:    src.veiculoAno ?? '',
+    tipoServico:   src.tipoServico ?? '',
+    totalGeral:    src.totalGeral ?? src.total ?? 0,
+    totalMaoDeObra:      src.totalMaoDeObra ?? 0,
+    totalPecas:          src.totalPecas ?? 0,
+    rastreamento:        src.rastreamento ?? 0,
     itens: {
-      servicos: (orcamento.itens?.servicos ?? []).map(({ descricao, valor, quantidade }) => ({ descricao, valor, quantidade })),
-      pecas:    (orcamento.itens?.pecas    ?? []).map(({ marca, descricao, valor, quantidade }) => ({ marca, descricao, valor, quantidade })),
+      servicos: (src.itens?.servicos ?? []).map(({ descricao, valor, quantidade }) => ({ descricao, valor, quantidade })),
+      pecas:    (src.itens?.pecas    ?? []).map(({ marca, descricao, valor, quantidade }) => ({ marca, descricao, valor, quantidade })),
     },
-    extras: { markup: orcamento.extras?.markup ?? 20 },
+    extras: { markup: src.extras?.markup ?? 20 },
   }
 
   // Cria documento de assinatura (leitura pública, escrita só via token)

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   TrendingUp, TrendingDown, DollarSign, AlertTriangle,
   Car, Package, Plus, Trash2, Edit, Building2, ChevronRight,
-  ShoppingCart,
+  ShoppingCart, BarChart2, Calendar,
 } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useToast } from '../contexts/ToastContext'
@@ -16,10 +16,13 @@ import Modal from '../components/ui/Modal'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 
 const TABS = [
-  { id: 'entradas', label: 'Entradas',  icon: TrendingUp    },
-  { id: 'saidas',   label: 'Saídas',    icon: TrendingDown  },
-  { id: 'perdas',   label: 'Perdas',    icon: AlertTriangle },
+  { id: 'entradas',  label: 'Entradas',  icon: TrendingUp    },
+  { id: 'saidas',    label: 'Saídas',    icon: TrendingDown  },
+  { id: 'perdas',    label: 'Perdas',    icon: AlertTriangle },
+  { id: 'historico', label: 'Histórico', icon: BarChart2     },
 ]
+
+const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
 const emptyMaterial = () => ({ descricao: '', valor: '', fornecedor: '', observacoes: '', data: new Date().toISOString().split('T')[0] })
 
@@ -30,7 +33,8 @@ export default function Financeiro() {
   const logger = useLogger()
 
   const [tab,        setTab]        = useState('entradas')
-  const [saidaView,  setSaidaView]  = useState('pecas') // 'pecas' | 'materiais'
+  const [saidaView,  setSaidaView]  = useState('pecas')    // 'pecas' | 'materiais'
+  const [histView,   setHistView]   = useState('mensal')   // 'mensal' | 'anual'
   const [matModal,   setMatModal]   = useState(null)     // null | { mode, item? }
   const [matForm,    setMatForm]    = useState(emptyMaterial())
   const [saving,     setSaving]     = useState(false)
@@ -70,6 +74,57 @@ export default function Financeiro() {
   const totalMateriais = useMemo(() => materiais.reduce((s, m) => s + (Number(m.valor) || 0), 0), [materiais])
   const totalSaidas    = totalPecas + totalMateriais
   const resultado      = totalEntradas - totalSaidas
+
+  // ── Histórico mensal ──────────────────────────────────────────────────────────
+  const registrosMensais = useMemo(() => {
+    const map = {}
+
+    const getKey = (val) => {
+      if (!val) return null
+      const d = val?.toDate ? val.toDate() : new Date(val)
+      if (isNaN(d.getTime())) return null
+      return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`, year: d.getFullYear(), month: d.getMonth() + 1 }
+    }
+
+    // Entradas e custo de peças (orçamentos pagos)
+    pagos.forEach((o) => {
+      const k = getKey(o.pagoEm ?? o.createdAt)
+      if (!k) return
+      if (!map[k.key]) map[k.key] = { key: k.key, year: k.year, month: k.month, entradas: 0, custoPecas: 0, custaMateriais: 0 }
+      map[k.key].entradas += o.totalGeral || o.total || 0;
+      (o.itens?.pecas ?? []).forEach((p) => {
+        map[k.key].custoPecas += (Number(p.valor) || 0) * (Number(p.quantidade) || 1)
+      })
+    })
+
+    // Saídas avulsas (materiais)
+    materiais.forEach((m) => {
+      if (!m.data) return
+      const [year, month] = m.data.split('-').map(Number)
+      const key = `${year}-${String(month).padStart(2,'0')}`
+      if (!map[key]) map[key] = { key, year, month, entradas: 0, custoPecas: 0, custaMateriais: 0 }
+      map[key].custaMateriais += Number(m.valor) || 0
+    })
+
+    return Object.values(map)
+      .map((r) => ({
+        ...r,
+        saidas:    r.custoPecas + r.custaMateriais,
+        resultado: r.entradas - r.custoPecas - r.custaMateriais,
+      }))
+      .sort((a, b) => b.key.localeCompare(a.key))
+  }, [pagos, materiais])
+
+  const registrosAnuais = useMemo(() => {
+    const map = {}
+    registrosMensais.forEach((m) => {
+      if (!map[m.year]) map[m.year] = { year: m.year, entradas: 0, saidas: 0, resultado: 0 }
+      map[m.year].entradas  += m.entradas
+      map[m.year].saidas    += m.saidas
+      map[m.year].resultado += m.resultado
+    })
+    return Object.values(map).sort((a, b) => b.year - a.year)
+  }, [registrosMensais])
 
   // ── Materiais CRUD ────────────────────────────────────────────────────────────
 
@@ -302,6 +357,114 @@ export default function Financeiro() {
                 <p className="text-sm font-semibold text-orange-700">Total de perdas</p>
                 <p className="font-bold text-orange-700">{formatCurrency(totalPerdas)}</p>
               </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── HISTÓRICO ──────────────────────────────────────────────────────── */}
+      {tab === 'historico' && (
+        <div className="flex flex-col gap-4">
+          {/* Sub-tabs Mensal / Anual */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setHistView('mensal')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                histView === 'mensal'
+                  ? 'bg-brand-black text-white'
+                  : 'bg-brand-gray-border text-brand-gray-light hover:text-brand-black'
+              }`}
+            >
+              <Calendar size={14} /> Mensal
+            </button>
+            <button
+              onClick={() => setHistView('anual')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                histView === 'anual'
+                  ? 'bg-brand-black text-white'
+                  : 'bg-brand-gray-border text-brand-gray-light hover:text-brand-black'
+              }`}
+            >
+              <BarChart2 size={14} /> Anual
+            </button>
+          </div>
+
+          {/* Legenda */}
+          <div className="flex flex-wrap gap-4 text-xs text-brand-gray-light">
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Faturamento (orçamentos pagos)</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> Gastos (peças + materiais)</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" /> Lucro líquido</span>
+          </div>
+
+          {/* Tabela Mensal */}
+          {histView === 'mensal' && (
+            <>
+              {registrosMensais.length === 0 ? (
+                <EmptyState icon={BarChart2} title="Nenhum registro mensal ainda" sub="Registros aparecem quando há orçamentos pagos ou materiais lançados." />
+              ) : (
+                <div className="card overflow-hidden">
+                  {/* Header */}
+                  <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-brand-white-off border-b border-brand-gray-border text-xs font-semibold text-brand-gray-light uppercase tracking-wide">
+                    <span>Período</span>
+                    <span className="text-right">Faturamento</span>
+                    <span className="text-right">Gastos</span>
+                    <span className="text-right">Lucro</span>
+                  </div>
+                  {registrosMensais.map((r) => (
+                    <div key={r.key} className="grid grid-cols-4 gap-2 px-4 py-3.5 border-b border-brand-gray-border last:border-0 hover:bg-brand-white-off transition-colors">
+                      <div>
+                        <p className="font-semibold text-brand-black text-sm">{MESES[r.month - 1]} {r.year}</p>
+                      </div>
+                      <p className="text-right text-sm font-medium text-green-600">{formatCurrency(r.entradas)}</p>
+                      <p className="text-right text-sm font-medium text-red-500">{formatCurrency(r.saidas)}</p>
+                      <p className={`text-right text-sm font-bold ${r.resultado >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                        {formatCurrency(r.resultado)}
+                      </p>
+                    </div>
+                  ))}
+                  {/* Totais */}
+                  <div className="grid grid-cols-4 gap-2 px-4 py-3 bg-brand-black rounded-b-xl">
+                    <p className="text-xs font-bold text-white uppercase tracking-wide">Total geral</p>
+                    <p className="text-right text-sm font-bold text-green-400">{formatCurrency(registrosMensais.reduce((s,r)=>s+r.entradas,0))}</p>
+                    <p className="text-right text-sm font-bold text-red-400">{formatCurrency(registrosMensais.reduce((s,r)=>s+r.saidas,0))}</p>
+                    <p className="text-right text-sm font-bold text-blue-300">{formatCurrency(registrosMensais.reduce((s,r)=>s+r.resultado,0))}</p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Tabela Anual */}
+          {histView === 'anual' && (
+            <>
+              {registrosAnuais.length === 0 ? (
+                <EmptyState icon={BarChart2} title="Nenhum registro anual ainda" sub="Registros aparecem quando há orçamentos pagos ou materiais lançados." />
+              ) : (
+                <div className="card overflow-hidden">
+                  <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-brand-white-off border-b border-brand-gray-border text-xs font-semibold text-brand-gray-light uppercase tracking-wide">
+                    <span>Ano</span>
+                    <span className="text-right">Faturamento</span>
+                    <span className="text-right">Gastos</span>
+                    <span className="text-right">Lucro</span>
+                  </div>
+                  {registrosAnuais.map((r) => (
+                    <div key={r.year} className="grid grid-cols-4 gap-2 px-4 py-4 border-b border-brand-gray-border last:border-0 hover:bg-brand-white-off transition-colors">
+                      <p className="font-bold text-brand-black">{r.year}</p>
+                      <p className="text-right text-sm font-medium text-green-600">{formatCurrency(r.entradas)}</p>
+                      <p className="text-right text-sm font-medium text-red-500">{formatCurrency(r.saidas)}</p>
+                      <p className={`text-right font-bold ${r.resultado >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                        {formatCurrency(r.resultado)}
+                      </p>
+                    </div>
+                  ))}
+                  <div className="grid grid-cols-4 gap-2 px-4 py-3 bg-brand-black rounded-b-xl">
+                    <p className="text-xs font-bold text-white uppercase tracking-wide">Total</p>
+                    <p className="text-right text-sm font-bold text-green-400">{formatCurrency(registrosAnuais.reduce((s,r)=>s+r.entradas,0))}</p>
+                    <p className="text-right text-sm font-bold text-red-400">{formatCurrency(registrosAnuais.reduce((s,r)=>s+r.saidas,0))}</p>
+                    <p className="text-right text-sm font-bold text-blue-300">{formatCurrency(registrosAnuais.reduce((s,r)=>s+r.resultado,0))}</p>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

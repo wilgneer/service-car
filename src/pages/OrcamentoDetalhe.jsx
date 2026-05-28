@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { onSnapshot, doc as fsDoc } from 'firebase/firestore'
+import { db } from '../firebase/config'
 import { ChevronLeft, Edit, Trash2, CheckCircle, XCircle, Printer, Car, Lock, Wrench, DollarSign, Send, Link2, Copy, Shield } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -35,6 +37,15 @@ export default function OrcamentoDetalhe() {
   const orcamento = orcamentos.find((o) => o.id === id)
   const cliente   = clientes.find((c) => c.id === orcamento?.clienteId)
   const carro     = carros.find((c) => c.id === orcamento?.carroId)
+
+  // ── Listener em tempo real — atualiza quando cliente assina ou status muda ───
+  useEffect(() => {
+    if (!id) return
+    const unsub = onSnapshot(fsDoc(db, 'orcamentos', id), (snap) => {
+      if (snap.exists()) editOrcamento(id, snap.data())
+    })
+    return () => unsub()
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!orcamento && orcamentos.length > 0) navigate('/')
