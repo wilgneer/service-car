@@ -72,6 +72,53 @@ export default function OrcamentoDetalhe() {
   const handleConcluir = () => changeStatus('concluido', { concluidoEm: new Date().toISOString() }, 'Orçamento concluído!', 'orcamento_concluido')
   const handlePagar    = () => changeStatus('pago',      { pagoEm:      new Date().toISOString() }, 'Pagamento registrado!','orcamento_pago')
 
+  const handlePrint = () => {
+    const area = document.getElementById('print-area')
+    if (!area) { window.print(); return }
+
+    // Coleta todos os estilos carregados na página
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map((el) => {
+        if (el.tagName === 'STYLE') return `<style>${el.textContent}</style>`
+        return `<link rel="stylesheet" href="${el.href}">`
+      })
+      .join('\n')
+
+    const win = window.open('', '_blank', 'width=900,height=700')
+    if (!win) { window.print(); return }
+
+    win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Orçamento</title>
+  ${styles}
+  <style>
+    @page { margin: 14mm; size: A4; }
+    body { background: white !important; font-family: 'Poppins', sans-serif; }
+    aside, .mobile-topbar, .mobile-bottom-nav, .no-print { display: none !important; }
+    .card { box-shadow: none !important; border: 1px solid #e5e7eb !important; }
+    .print-price { display: block !important; }
+    .screen-price { display: none !important; }
+  </style>
+</head>
+<body>${area.innerHTML}</body>
+</html>`)
+    win.document.close()
+    win.focus()
+    // Aguarda fontes/estilos carregarem antes de imprimir
+    win.onload = () => {
+      setTimeout(() => {
+        win.print()
+        win.close()
+      }, 400)
+    }
+    // Fallback caso onload não dispare (conteúdo já estava em cache)
+    setTimeout(() => {
+      if (!win.closed) { win.print(); win.close() }
+    }, 1200)
+  }
+
   const openDelete = () => { setDeletePass(''); setDeletePassErr(''); setDeleteModal(true) }
 
   const handleDelete = async () => {
@@ -90,7 +137,7 @@ export default function OrcamentoDetalhe() {
   }
 
   return (
-    <div className="flex flex-col gap-5 max-w-2xl">
+    <div id="print-area" className="flex flex-col gap-5 max-w-2xl">
 
       {/* ── Cabeçalho de impressão (só no PDF/impressão) ──────────────────────── */}
       <div className="hidden print:block mb-4">
@@ -167,7 +214,7 @@ export default function OrcamentoDetalhe() {
             <Trash2 size={15} /> Excluir
           </Button>
         )}
-        <Button onClick={() => window.print()} variant="secondary" size="sm">
+        <Button onClick={handlePrint} variant="secondary" size="sm">
           <Printer size={15} /> Imprimir
         </Button>
       </div>

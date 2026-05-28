@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 /* ── Print ───────────────────────────────────────────────────────────────── */
+@page {
+  margin: 16mm;
+  /* Remove URL, título e data que o navegador imprime por padrão */
+  size: A4;
+}
+
 @media print {
   aside, .mobile-topbar, .mobile-bottom-nav, .no-print { display: none !important; }
   main { margin-left: 0 !important; padding-top: 0 !important; }
