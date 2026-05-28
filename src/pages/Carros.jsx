@@ -33,13 +33,25 @@ export default function Carros() {
   const openEdit   = (c) => { setForm({ nome: c.nome ?? '', marca: c.marca ?? '', cor: c.cor ?? '', ano: c.ano ?? '', placa: c.placa ?? '', clienteId: c.clienteId ?? '' }); setModal(c.id) }
 
   const handleSave = async () => {
-    if (!form.nome) return
+    if (!form.nome) { toast.error('Informe o modelo do veículo.'); return }
+    if (!form.placa) { toast.error('A placa é obrigatória.'); return }
+    // Valida placa duplicada
+    const placaNorm = form.placa.replace(/[-\s]/g, '').toUpperCase()
+    const duplicada = carros.find((c) =>
+      c.id !== modal &&
+      c.placa?.replace(/[-\s]/g, '').toUpperCase() === placaNorm
+    )
+    if (duplicada) {
+      const dono = clientes.find((c) => c.id === duplicada.clienteId)
+      toast.error(`Placa ${form.placa} já cadastrada${dono ? ` para ${dono.nome}` : ''}.`)
+      return
+    }
     setSaving(true)
     try {
       if (modal === 'create') {
         const id = await svc.createCarro(form)
         addCarro({ id, ...form })
-        logger.activity('carro_criado', `Veículo "${form.nome}" ${form.placa ? `(${form.placa})` : ''} cadastrado`)
+        logger.activity('carro_criado', `Veículo "${form.nome}" (${form.placa}) cadastrado`)
         toast.success(`Veículo "${form.nome}" cadastrado!`)
       } else {
         await svc.updateCarro(modal, form)
@@ -117,7 +129,7 @@ export default function Carros() {
             <Input label="Marca" value={form.marca} onChange={set('marca')} placeholder="Honda..." />
             <Input label="Cor"   value={form.cor}   onChange={set('cor')}   placeholder="Branco..." />
             <Input label="Ano"   value={form.ano}   onChange={set('ano')}   placeholder="2020" />
-            <Input label="Placa" value={form.placa} onChange={set('placa')} placeholder="ABC-1234" />
+            <Input label="Placa *" value={form.placa} onChange={set('placa')} placeholder="ABC-1234" />
           </div>
           <Select label="Proprietário" value={form.clienteId} onChange={set('clienteId')}>
             <option value="">Sem proprietário</option>

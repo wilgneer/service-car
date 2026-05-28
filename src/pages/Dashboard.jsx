@@ -12,7 +12,7 @@ import EmptyState from '../components/ui/EmptyState'
 
 const STATUS_FILTERS = [
   { value: 'todos',      label: 'Todos'       },
-  { value: 'rascunho',   label: 'Rascunho'    },
+  { value: 'rascunho',   label: 'Pend. Aprov.' },
   { value: 'em_analise', label: 'Em Análise'  },
   { value: 'aprovado',   label: 'Aprovados'   },
   { value: 'reprovado',  label: 'Reprovados'  },

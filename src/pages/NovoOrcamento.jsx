@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2, ChevronLeft, UserPlus, Car as CarIcon, Info } from 'lucide-react'
+import { Plus, Trash2, ChevronLeft, UserPlus, Car as CarIcon, Info, Search, X } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -11,8 +11,91 @@ import Button from '../components/ui/Button'
 import Input, { Select } from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
 
-const emptyPeca = () => ({ marca: '', descricao: '', valor: '', quantidade: 1 })
+const emptyPeca    = () => ({ marca: '', descricao: '', valor: '', quantidade: 1 })
 const emptyServico = () => ({ descricao: '', valor: '', quantidade: 1 })
+
+// ── Componente de busca com autocomplete ──────────────────────────────────────
+function SearchSelect({ label, items, value, onChange, getLabel, getKey, getSub, placeholder, error }) {
+  const [query,  setQuery]  = useState('')
+  const [open,   setOpen]   = useState(false)
+  const ref = useRef(null)
+
+  const selected = items.find((i) => getKey(i) === value)
+
+  const filtered = useMemo(() => {
+    const term = query.toLowerCase()
+    return items.filter((i) =>
+      getLabel(i).toLowerCase().includes(term) ||
+      getSub?.(i)?.toLowerCase().includes(term)
+    ).slice(0, 8)
+  }, [items, query])
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleSelect = (item) => {
+    onChange(getKey(item))
+    setQuery('')
+    setOpen(false)
+  }
+
+  const handleClear = () => { onChange(''); setQuery(''); setOpen(false) }
+
+  return (
+    <div className="flex flex-col gap-1" ref={ref}>
+      <label className="text-sm font-medium text-brand-black">{label}</label>
+      <div className="relative">
+        {selected ? (
+          <div className={`input-field flex items-center justify-between gap-2 cursor-default ${error ? 'border-red-400' : ''}`}>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-brand-black truncate">{getLabel(selected)}</p>
+              {getSub && <p className="text-xs text-brand-gray-light truncate">{getSub(selected)}</p>}
+            </div>
+            <button type="button" onClick={handleClear} className="shrink-0 text-brand-gray-light hover:text-red-500 transition-colors">
+              <X size={15} />
+            </button>
+          </div>
+        ) : (
+          <>
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray-light pointer-events-none" />
+            <input
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
+              onFocus={() => setOpen(true)}
+              placeholder={placeholder}
+              className={`input-field pl-9 ${error ? 'border-red-400' : ''}`}
+            />
+          </>
+        )}
+
+        {open && !selected && filtered.length > 0 && (
+          <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white border border-brand-gray-border rounded-xl shadow-lg overflow-hidden">
+            {filtered.map((item) => (
+              <button
+                key={getKey(item)}
+                type="button"
+                onMouseDown={() => handleSelect(item)}
+                className="w-full text-left px-4 py-2.5 hover:bg-brand-yellow-light transition-colors flex flex-col"
+              >
+                <span className="text-sm font-medium text-brand-black">{getLabel(item)}</span>
+                {getSub && <span className="text-xs text-brand-gray-light">{getSub(item)}</span>}
+              </button>
+            ))}
+          </div>
+        )}
+        {open && !selected && query.length > 0 && filtered.length === 0 && (
+          <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white border border-brand-gray-border rounded-xl shadow-lg px-4 py-3 text-sm text-brand-gray-light">
+            Nenhum resultado para "{query}"
+          </div>
+        )}
+      </div>
+      {error && <p className="text-xs text-red-500">{error}</p>}
+    </div>
+  )
+}
 
 export default function NovoOrcamento() {
   const navigate = useNavigate()
@@ -21,20 +104,20 @@ export default function NovoOrcamento() {
   const toast = useToast()
   const logger = useLogger()
 
-  const [clienteId, setClienteId] = useState('')
-  const [carroId, setCarroId] = useState('')
+  const [clienteId,     setClienteId]     = useState('')
+  const [carroId,       setCarroId]       = useState('')
   const [servicosItens, setServicosItens] = useState([emptyServico()])
-  const [pecasItens, setPecasItens] = useState([emptyPeca()])
-  const [markup, setMarkup] = useState(20)
-  const [rastreamento, setRastreamento] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [errors, setErrors] = useState({})
+  const [pecasItens,    setPecasItens]    = useState([emptyPeca()])
+  const [markup,        setMarkup]        = useState(20)
+  const [rastreamento,  setRastreamento]  = useState('')
+  const [loading,       setLoading]       = useState(false)
+  const [errors,        setErrors]        = useState({})
 
   // Quick-create modals
   const [showNovoCliente, setShowNovoCliente] = useState(false)
-  const [showNovoCarro, setShowNovoCarro] = useState(false)
-  const [newCliente, setNewCliente] = useState({ nome: '', celular: '' })
-  const [newCarro, setNewCarro] = useState({ nome: '', marca: '', cor: '', ano: '', placa: '' })
+  const [showNovoCarro,   setShowNovoCarro]   = useState(false)
+  const [newCliente,  setNewCliente]  = useState({ nome: '', celular: '' })
+  const [newCarro,    setNewCarro]    = useState({ nome: '', marca: '', cor: '', ano: '', placa: '' })
   const [savingModal, setSavingModal] = useState(false)
 
   const carrosFiltrados = useMemo(() =>
@@ -52,14 +135,13 @@ export default function NovoOrcamento() {
 
   const updateItem = (list, setList, index, field, value) =>
     setList((prev) => prev.map((item, i) => i === index ? { ...item, [field]: value } : item))
-
-  const addItem = (setList, empty) => setList((prev) => [...prev, empty()])
+  const addItem    = (setList, empty) => setList((prev) => [...prev, empty()])
   const removeItem = (setList, index) => setList((prev) => prev.filter((_, i) => i !== index))
 
   const validate = () => {
     const e = {}
     if (!clienteId) e.clienteId = 'Selecione um cliente'
-    if (!carroId) e.carroId = 'Selecione um veículo'
+    if (!carroId)   e.carroId   = 'Selecione um veículo'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -71,12 +153,10 @@ export default function NovoOrcamento() {
     try {
       const itens = {
         servicos: servicosItens.filter((i) => i.descricao || i.valor),
-        pecas: pecasItens.filter((i) => i.descricao || i.valor),
+        pecas:    pecasItens.filter((i) => i.descricao || i.valor),
       }
       const extras = { markup: Number(markup) || 20, rastreamento: Number(rastreamento) || 0 }
       const t = calcTotals(itens, extras)
-
-      // Campos desnormalizados exigidos pelas Firestore Rules
       const cliente = clientes.find((c) => c.id === clienteId)
       const carro   = carros.find((c) => c.id === carroId)
 
@@ -85,11 +165,11 @@ export default function NovoOrcamento() {
         carroId,
         itens,
         extras,
-        clienteNome:   cliente?.nome   ?? '',
-        veiculoModelo: carro?.nome     ?? '',
-        veiculoPlaca:  carro?.placa    ?? '',
-        veiculoAno:    carro?.ano      ?? '',
-        createdBy:     user?.uid       ?? '',
+        clienteNome:         cliente?.nome  ?? '',
+        veiculoModelo:       carro?.nome    ?? '',
+        veiculoPlaca:        carro?.placa   ?? '',
+        veiculoAno:          carro?.ano     ?? '',
+        createdBy:           user?.uid      ?? '',
         totalMaoDeObra:      t.totalMaoDeObra,
         totalPecasSemMarkup: t.totalPecasSemMarkup,
         totalMarkup:         t.totalMarkup,
@@ -103,16 +183,20 @@ export default function NovoOrcamento() {
       toast.success('Orçamento criado com sucesso!')
       navigate('/')
     } catch (err) {
-      console.error('[NovoOrcamento] Erro ao criar orçamento:', err)
+      console.error('[NovoOrcamento] Erro:', err)
       logger.error('erro_ao_salvar', 'Erro ao criar orçamento', { err: err?.message })
       toast.error(`Erro ao salvar: ${err?.message ?? 'verifique o console (F12)'}`)
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   const handleSaveCliente = async () => {
-    if (!newCliente.nome) return
+    if (!newCliente.nome) { toast.error('Informe o nome do cliente.'); return }
+    // Valida celular duplicado
+    if (newCliente.celular) {
+      const cel = newCliente.celular.replace(/\D/g, '')
+      const dup = clientes.find((c) => c.celular?.replace(/\D/g, '') === cel && cel.length >= 8)
+      if (dup) { toast.error(`Esse número já está cadastrado para "${dup.nome}".`); return }
+    }
     setSavingModal(true)
     try {
       const id = await svc.createCliente(newCliente)
@@ -122,25 +206,31 @@ export default function NovoOrcamento() {
       setShowNovoCliente(false)
       setNewCliente({ nome: '', celular: '' })
       toast.success(`Cliente "${newCliente.nome}" cadastrado!`)
-    } catch {
-      toast.error('Erro ao cadastrar cliente.')
+    } catch { toast.error('Erro ao cadastrar cliente.')
     } finally { setSavingModal(false) }
   }
 
   const handleSaveCarro = async () => {
-    if (!newCarro.nome) return
+    if (!newCarro.nome)  { toast.error('Informe o modelo do veículo.'); return }
+    if (!newCarro.placa) { toast.error('A placa é obrigatória.'); return }
+    const placaNorm = newCarro.placa.replace(/[-\s]/g, '').toUpperCase()
+    const dup = carros.find((c) => c.placa?.replace(/[-\s]/g, '').toUpperCase() === placaNorm)
+    if (dup) {
+      const dono = clientes.find((c) => c.id === dup.clienteId)
+      toast.error(`Placa ${newCarro.placa} já cadastrada${dono ? ` para ${dono.nome}` : ''}.`)
+      return
+    }
     setSavingModal(true)
     try {
       const carroData = { ...newCarro, clienteId: clienteId || null }
       const id = await svc.createCarro(carroData)
       addCarro({ id, ...carroData })
-      logger.activity('carro_criado', `Veículo "${newCarro.nome}" cadastrado via orçamento`)
+      logger.activity('carro_criado', `Veículo "${newCarro.nome}" (${newCarro.placa}) cadastrado via orçamento`)
       setCarroId(id)
       setShowNovoCarro(false)
       setNewCarro({ nome: '', marca: '', cor: '', ano: '', placa: '' })
       toast.success(`Veículo "${newCarro.nome}" cadastrado!`)
-    } catch {
-      toast.error('Erro ao cadastrar veículo.')
+    } catch { toast.error('Erro ao cadastrar veículo.')
     } finally { setSavingModal(false) }
   }
 
@@ -164,10 +254,17 @@ export default function NovoOrcamento() {
           <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black">Cliente e Veículo</h2>
           <div className="flex gap-2 items-end">
             <div className="flex-1">
-              <Select label="Cliente" value={clienteId} onChange={(e) => { setClienteId(e.target.value); setCarroId('') }} error={errors.clienteId}>
-                <option value="">Selecione um cliente</option>
-                {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-              </Select>
+              <SearchSelect
+                label="Cliente"
+                items={clientes}
+                value={clienteId}
+                onChange={(id) => { setClienteId(id); setCarroId('') }}
+                getKey={(c) => c.id}
+                getLabel={(c) => c.nome}
+                getSub={(c) => c.celular}
+                placeholder="Buscar cliente..."
+                error={errors.clienteId}
+              />
             </div>
             <button type="button" onClick={() => setShowNovoCliente(true)} className="btn-secondary px-3 py-2 mb-0.5" title="Novo cliente">
               <UserPlus size={16} />
@@ -175,10 +272,17 @@ export default function NovoOrcamento() {
           </div>
           <div className="flex gap-2 items-end">
             <div className="flex-1">
-              <Select label="Veículo" value={carroId} onChange={(e) => setCarroId(e.target.value)} error={errors.carroId}>
-                <option value="">Selecione um veículo</option>
-                {carrosFiltrados.map((c) => <option key={c.id} value={c.id}>{c.nome} {c.placa ? `(${c.placa})` : ''}</option>)}
-              </Select>
+              <SearchSelect
+                label="Veículo"
+                items={carrosFiltrados}
+                value={carroId}
+                onChange={setCarroId}
+                getKey={(c) => c.id}
+                getLabel={(c) => c.nome}
+                getSub={(c) => [c.marca, c.placa].filter(Boolean).join(' · ')}
+                placeholder="Buscar veículo..."
+                error={errors.carroId}
+              />
             </div>
             <button type="button" onClick={() => setShowNovoCarro(true)} className="btn-secondary px-3 py-2 mb-0.5" title="Novo veículo">
               <CarIcon size={16} />
@@ -194,44 +298,36 @@ export default function NovoOrcamento() {
               <Plus size={13} /> Adicionar
             </button>
           </div>
-
           {/* Markup config */}
           <div className="flex items-center gap-3 bg-brand-yellow-light rounded-lg px-3 py-2">
             <Info size={14} className="text-brand-yellow-dark shrink-0" />
-            <span className="text-xs text-brand-yellow-dark flex-1">Markup aplicado ao custo das peças</span>
+            <span className="text-xs text-brand-yellow-dark flex-1">Acréscimo aplicado ao custo das peças</span>
             <div className="flex items-center gap-1">
               <input
                 type="number"
                 value={markup}
                 onChange={(e) => setMarkup(e.target.value)}
                 className="w-14 text-center border border-brand-yellow-dark rounded px-1 py-0.5 text-xs font-bold bg-white text-brand-black"
-                min={0}
-                max={100}
+                min={0} max={100}
               />
               <span className="text-xs font-bold text-brand-yellow-dark">%</span>
             </div>
           </div>
-
           {pecasItens.map((item, i) => (
             <PecaRow
-              key={i}
-              item={item}
-              catalog={pecas}
-              markup={markup}
+              key={i} item={item} catalog={pecas} markup={markup}
               onChange={(field, val) => updateItem(pecasItens, setPecasItens, i, field, val)}
               onRemove={() => removeItem(setPecasItens, i)}
               canRemove={pecasItens.length > 1}
             />
           ))}
-
-          {/* Subtotal peças */}
           <div className="border-t border-brand-gray-border pt-2 flex flex-col gap-1">
             <div className="flex justify-between text-xs text-brand-gray-light">
               <span>Subtotal peças (custo)</span>
               <span>{formatCurrency(totals.totalPecasSemMarkup)}</span>
             </div>
             <div className="flex justify-between text-xs text-brand-gray-light">
-              <span>Markup {markup}%</span>
+              <span>Acréscimo {markup}%</span>
               <span>+ {formatCurrency(totals.totalMarkup)}</span>
             </div>
             <div className="flex justify-between text-sm font-semibold text-brand-black">
@@ -241,26 +337,24 @@ export default function NovoOrcamento() {
           </div>
         </div>
 
-        {/* Mão de Obra */}
+        {/* Serviços */}
         <div className="card p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black">Mão de Obra</h2>
+            <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black">Serviços</h2>
             <button type="button" onClick={() => addItem(setServicosItens, emptyServico)} className="btn-secondary px-2.5 py-1.5 text-xs">
               <Plus size={13} /> Adicionar
             </button>
           </div>
           {servicosItens.map((item, i) => (
             <ServicoRow
-              key={i}
-              item={item}
-              catalog={servicos}
+              key={i} item={item} catalog={servicos}
               onChange={(field, val) => updateItem(servicosItens, setServicosItens, i, field, val)}
               onRemove={() => removeItem(setServicosItens, i)}
               canRemove={servicosItens.length > 1}
             />
           ))}
           <div className="flex justify-between text-sm font-semibold text-brand-black border-t border-brand-gray-border pt-2">
-            <span>Total mão de obra</span>
+            <span>Total serviços</span>
             <span>{formatCurrency(totals.totalMaoDeObra)}</span>
           </div>
         </div>
@@ -281,11 +375,11 @@ export default function NovoOrcamento() {
           />
         </div>
 
-        {/* Resumo final */}
+        {/* Resumo */}
         <div className="card p-4 flex flex-col gap-2">
           <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black mb-1">Resumo</h2>
-          <TotalRow label="Peças (com markup)" value={totals.totalPecas} />
-          <TotalRow label="Mão de Obra" value={totals.totalMaoDeObra} />
+          <TotalRow label="Peças (com acréscimo)" value={totals.totalPecas} />
+          <TotalRow label="Serviços"              value={totals.totalMaoDeObra} />
           {totals.rastreamento > 0 && <TotalRow label="Rastreamento" value={totals.rastreamento} />}
           <div className="border-t border-brand-gray-border pt-2 mt-1">
             <TotalRow label="Total Geral" value={totals.totalGeral} bold />
@@ -320,9 +414,9 @@ export default function NovoOrcamento() {
           <Input label="Modelo *" value={newCarro.nome} onChange={(e) => setNewCarro((p) => ({ ...p, nome: e.target.value }))} placeholder="Ex: Civic, Corolla..." />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Marca" value={newCarro.marca} onChange={(e) => setNewCarro((p) => ({ ...p, marca: e.target.value }))} placeholder="Honda, Toyota..." />
-            <Input label="Cor" value={newCarro.cor} onChange={(e) => setNewCarro((p) => ({ ...p, cor: e.target.value }))} placeholder="Branco, Preto..." />
-            <Input label="Ano" value={newCarro.ano} onChange={(e) => setNewCarro((p) => ({ ...p, ano: e.target.value }))} placeholder="2020" />
-            <Input label="Placa" value={newCarro.placa} onChange={(e) => setNewCarro((p) => ({ ...p, placa: e.target.value.toUpperCase() }))} placeholder="ABC-1234" />
+            <Input label="Cor"   value={newCarro.cor}   onChange={(e) => setNewCarro((p) => ({ ...p, cor: e.target.value }))}   placeholder="Branco, Preto..." />
+            <Input label="Ano"   value={newCarro.ano}   onChange={(e) => setNewCarro((p) => ({ ...p, ano: e.target.value }))}   placeholder="2020" />
+            <Input label="Placa *" value={newCarro.placa} onChange={(e) => setNewCarro((p) => ({ ...p, placa: e.target.value.toUpperCase() }))} placeholder="ABC-1234" />
           </div>
           <div className="flex gap-3 mt-2">
             <Button variant="secondary" className="flex-1 justify-center" onClick={() => setShowNovoCarro(false)}>Cancelar</Button>
@@ -337,35 +431,20 @@ export default function NovoOrcamento() {
 function PecaRow({ item, catalog, markup, onChange, onRemove, canRemove }) {
   const custo = (Number(item.valor) || 0) * (Number(item.quantidade) || 1)
   const total = custo * (1 + (Number(markup) || 0) / 100)
-
   return (
     <div className="border border-brand-gray-border rounded-lg p-3 flex flex-col gap-2 bg-brand-white-off">
       <div className="flex gap-2">
-        <select
-          onChange={(e) => {
-            const found = catalog.find((s) => s.id === e.target.value)
-            if (found) {
-              onChange('descricao', found.tipoPeca ?? '')
-              if (found.valor) onChange('valor', String(found.valor))
-            }
-          }}
-          className="input-field flex-1 text-xs"
-          defaultValue=""
-        >
+        <select onChange={(e) => { const f = catalog.find((s) => s.id === e.target.value); if (f) { onChange('descricao', f.tipoPeca ?? ''); if (f.valor) onChange('valor', String(f.valor)) } }} className="input-field flex-1 text-xs" defaultValue="">
           <option value="">Selecionar do catálogo</option>
           {catalog.map((s) => <option key={s.id} value={s.id}>{s.tipoPeca}</option>)}
         </select>
-        {canRemove && (
-          <button type="button" onClick={onRemove} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-            <Trash2 size={15} />
-          </button>
-        )}
+        {canRemove && <button type="button" onClick={onRemove} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={15} /></button>}
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <input value={item.marca} onChange={(e) => onChange('marca', e.target.value)} placeholder="Marca (ex: NGK, Bosch...)" className="input-field col-span-2" />
-        <input value={item.descricao} onChange={(e) => onChange('descricao', e.target.value)} placeholder="Descrição da peça" className="input-field col-span-2" />
-        <input type="number" value={item.quantidade} onChange={(e) => onChange('quantidade', e.target.value)} placeholder="Qtd" min={1} className="input-field" />
-        <input type="number" value={item.valor} onChange={(e) => onChange('valor', e.target.value)} placeholder="Custo unit." step="0.01" className="input-field" />
+        <input value={item.marca}      onChange={(e) => onChange('marca', e.target.value)}      placeholder="Marca (ex: NGK, Bosch...)"  className="input-field col-span-2" />
+        <input value={item.descricao}  onChange={(e) => onChange('descricao', e.target.value)}  placeholder="Descrição da peça"          className="input-field col-span-2" />
+        <input type="number" value={item.quantidade} onChange={(e) => onChange('quantidade', e.target.value)} placeholder="Qtd"        min={1} className="input-field" />
+        <input type="number" value={item.valor}      onChange={(e) => onChange('valor', e.target.value)}      placeholder="Custo unit." step="0.01" className="input-field" />
       </div>
       <div className="flex items-center justify-between text-xs bg-brand-yellow-light rounded px-2 py-1.5">
         <span className="text-brand-yellow-dark">Custo: {formatCurrency(custo)} + {markup}% = </span>
@@ -380,33 +459,17 @@ function ServicoRow({ item, catalog, onChange, onRemove, canRemove }) {
   return (
     <div className="border border-brand-gray-border rounded-lg p-3 flex flex-col gap-2 bg-brand-white-off">
       <div className="flex gap-2">
-        <select
-          onChange={(e) => {
-            const found = catalog.find((s) => s.id === e.target.value)
-            if (found) {
-              onChange('descricao', found.tipoServico ?? found.descricao ?? '')
-              if (found.valor) onChange('valor', String(found.valor))
-            }
-          }}
-          className="input-field flex-1 text-xs"
-          defaultValue=""
-        >
+        <select onChange={(e) => { const f = catalog.find((s) => s.id === e.target.value); if (f) { onChange('descricao', f.tipoServico ?? f.descricao ?? ''); if (f.valor) onChange('valor', String(f.valor)) } }} className="input-field flex-1 text-xs" defaultValue="">
           <option value="">Selecionar do catálogo</option>
           {catalog.map((s) => <option key={s.id} value={s.id}>{s.tipoServico}</option>)}
         </select>
-        {canRemove && (
-          <button type="button" onClick={onRemove} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-            <Trash2 size={15} />
-          </button>
-        )}
+        {canRemove && <button type="button" onClick={onRemove} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={15} /></button>}
       </div>
       <input value={item.descricao} onChange={(e) => onChange('descricao', e.target.value)} placeholder="Descrição do serviço" className="input-field" />
       <div className="flex gap-2">
-        <input type="number" value={item.quantidade} onChange={(e) => onChange('quantidade', e.target.value)} placeholder="Qtd" min={1} className="input-field w-20" />
-        <input type="number" value={item.valor} onChange={(e) => onChange('valor', e.target.value)} placeholder="Valor unitário" step="0.01" className="input-field flex-1" />
-        <div className="input-field w-28 bg-brand-gray-border text-sm font-medium text-right pointer-events-none">
-          {formatCurrency(total)}
-        </div>
+        <input type="number" value={item.quantidade} onChange={(e) => onChange('quantidade', e.target.value)} placeholder="Qtd"            min={1} className="input-field w-20" />
+        <input type="number" value={item.valor}      onChange={(e) => onChange('valor', e.target.value)}      placeholder="Valor unitário" step="0.01" className="input-field flex-1" />
+        <div className="input-field w-28 bg-brand-gray-border text-sm font-medium text-right pointer-events-none">{formatCurrency(total)}</div>
       </div>
     </div>
   )

@@ -188,10 +188,10 @@ export default function EditarOrcamento() {
           </div>
         </div>
 
-        {/* Mão de Obra */}
+        {/* Serviços */}
         <div className="card p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black">Mão de Obra</h2>
+            <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black">Serviços</h2>
             <button type="button" onClick={() => addItem(setServicosItens, emptyServico)} className="btn-secondary px-2.5 py-1.5 text-xs">
               <Plus size={13} /> Adicionar
             </button>
@@ -207,7 +207,7 @@ export default function EditarOrcamento() {
             />
           ))}
           <div className="flex justify-between text-sm font-semibold text-brand-black border-t border-brand-gray-border pt-2">
-            <span>Total mão de obra</span>
+            <span>Total serviços</span>
             <span>{formatCurrency(totals.totalMaoDeObra)}</span>
           </div>
         </div>
@@ -232,7 +232,7 @@ export default function EditarOrcamento() {
         <div className="card p-4 flex flex-col gap-2">
           <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black mb-1">Resumo</h2>
           <TotalRow label="Peças (com markup)"  value={totals.totalPecas} />
-          <TotalRow label="Mão de Obra"          value={totals.totalMaoDeObra} />
+          <TotalRow label="Serviços"          value={totals.totalMaoDeObra} />
           {totals.rastreamento > 0 && <TotalRow label="Rastreamento" value={totals.rastreamento} />}
           <div className="border-t border-brand-gray-border pt-2 mt-1">
             <TotalRow label="Total Geral" value={totals.totalGeral} bold />

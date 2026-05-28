@@ -33,6 +33,18 @@ export default function Clientes() {
 
   const handleSave = async () => {
     if (!form.nome) return
+    // Valida celular duplicado
+    if (form.celular) {
+      const cel = form.celular.replace(/\D/g, '')
+      const duplicado = clientes.find((c) =>
+        c.id !== modal &&
+        c.celular?.replace(/\D/g, '') === cel && cel.length >= 8
+      )
+      if (duplicado) {
+        toast.error(`Esse número já está cadastrado para "${duplicado.nome}".`)
+        return
+      }
+    }
     setSaving(true)
     try {
       if (modal === 'create') {

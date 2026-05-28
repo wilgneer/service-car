@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Print ───────────────────────────────────────────────────────────────── */
+@media print {
+  aside, .mobile-topbar, .mobile-bottom-nav, .no-print { display: none !important; }
+  main { margin-left: 0 !important; padding-top: 0 !important; }
+  body { background: white !important; }
+  .card { box-shadow: none !important; border: 1px solid #e5e7eb !important; }
+  .print-price { display: block !important; }
+  .screen-price { display: none !important; }
+}
+
 @keyframes slideIn {
   from { opacity: 0; transform: translateX(110%) scale(0.95); }
   to   { opacity: 1; transform: translateX(0)    scale(1);    }
