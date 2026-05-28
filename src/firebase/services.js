@@ -12,6 +12,24 @@ const withTimeout = (promise, ms = 12000, msg = 'Firestore não respondeu. Verif
     new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms)),
   ])
 
+// ── Diagnóstico de conectividade ─────────────────────────────────────────────
+export const testarConectividade = async () => {
+  const inicio = Date.now()
+  try {
+    const snap = await withTimeout(
+      getDocs(query(collection(db, 'clientes'), limit(1))),
+      8000,
+      'Timeout ao conectar com Firestore',
+    )
+    console.info(`[Firestore] ✅ Conectado em ${Date.now() - inicio}ms. Docs lidos: ${snap.size}`)
+    return { ok: true, ms: Date.now() - inicio }
+  } catch (err) {
+    console.error(`[Firestore] ❌ ERRO (${Date.now() - inicio}ms):`, err?.code ?? err?.message ?? err)
+    console.error('[Firestore] Código do erro:', err?.code)
+    return { ok: false, ms: Date.now() - inicio, error: err?.code ?? err?.message }
+  }
+}
+
 // ── Generic helpers ──────────────────────────────────────────────────────────
 
 export const getAll = async (col) => {

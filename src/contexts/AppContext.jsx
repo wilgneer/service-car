@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import * as svc from '../firebase/services'
+import { testarConectividade } from '../firebase/services'
 import { useAuth } from './AuthContext'
 
 const AppContext = createContext(null)
@@ -89,6 +90,11 @@ export function AppProvider({ children }) {
       return
     }
     setLoadingData(true)
+    // Diagnóstico: testa conectividade antes de carregar tudo
+    const diag = await testarConectividade()
+    if (!diag.ok) {
+      console.error('[AppContext] Firestore inacessível. Verifique as Security Rules e a conexão.')
+    }
     try {
       const [c, ca, s, p, oResult] = await Promise.all([
         svc.getClientes(),
@@ -101,6 +107,8 @@ export function AppProvider({ children }) {
       setOrcamentos(oResult.items)
       setOrcamentosLastDoc(oResult.lastDoc)
       setOrcamentosHasMore(oResult.hasMore)
+    } catch (err) {
+      console.error('[AppContext] Falha ao carregar dados do Firestore:', err?.message ?? err)
     } finally {
       setLoadingData(false)
       loaded.current = true

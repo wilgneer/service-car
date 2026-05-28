@@ -14,11 +14,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 
-// long-polling: usa HTTP normal em vez de WebSocket
-// resolve travamentos causados por bloqueio de WebSocket (firewalls, CSP, etc.)
+// Banco de dados nomeado "autocenterfloresta" (não o padrão "(default)")
+// + autoDetectLongPolling para compatibilidade de rede
 export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-  useFetchStreams: false,
-})
+  experimentalAutoDetectLongPolling: true,
+}, 'autocenterfloresta')
 
 export default app
