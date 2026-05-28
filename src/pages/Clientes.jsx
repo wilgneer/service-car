@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Users, Plus, Edit, Trash2, Phone, Search, FileText } from 'lucide-react'
+import React, { useState, useMemo } from 'react'
+import { Users, Plus, Edit, Trash2, Phone, Search, FileText, Clock } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLogger } from '../hooks/useLogger'
@@ -73,7 +73,25 @@ export default function Clientes() {
     } catch (err) { logger.error('erro_ao_excluir', 'Erro ao excluir cliente', { err: err?.message }); toast.error('Erro ao remover cliente.') }
   }
 
-  const orcamentosCount = (id) => orcamentos.filter((o) => o.clienteId === id).length
+  // Stats por cliente — orçamentos + último atendimento
+  const statsPorCliente = useMemo(() => {
+    const map = {}
+    orcamentos.forEach((o) => {
+      if (!o.clienteId) return
+      if (!map[o.clienteId]) map[o.clienteId] = { count: 0, lastDate: null }
+      map[o.clienteId].count++
+      const d = o.createdAt?.toDate ? o.createdAt.toDate() : (o.createdAt ? new Date(o.createdAt) : null)
+      if (d && (!map[o.clienteId].lastDate || d > map[o.clienteId].lastDate)) {
+        map[o.clienteId].lastDate = d
+      }
+    })
+    return map
+  }, [orcamentos])
+
+  const formatLastDate = (d) => {
+    if (!d) return null
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -94,7 +112,9 @@ export default function Clientes() {
         <EmptyState icon={Users} title="Nenhum cliente encontrado" action={<Button onClick={openCreate}><Plus size={16} /> Novo Cliente</Button>} />
       ) : (
         <div className="flex flex-col gap-2">
-          {filtered.map((c) => (
+          {filtered.map((c) => {
+            const stats = statsPorCliente[c.id] ?? { count: 0, lastDate: null }
+            return (
             <div key={c.id} className="card p-4 flex items-center gap-4">
               <div className="w-10 h-10 bg-brand-yellow-light rounded-full flex items-center justify-center shrink-0">
                 <span className="text-brand-yellow-dark font-bold text-sm">{c.nome?.[0]?.toUpperCase()}</span>
@@ -102,8 +122,17 @@ export default function Clientes() {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-brand-black truncate">{c.nome}</p>
                 {c.celular && <div className="flex items-center gap-1 text-sm text-brand-gray-light"><Phone size={12} /> {c.celular}</div>}
-                <div className="flex items-center gap-1 text-xs text-brand-gray-light mt-0.5">
-                  <FileText size={11} /> {orcamentosCount(c.id)} orçamento(s)
+                <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                  <div className="flex items-center gap-1 text-xs text-brand-gray-light">
+                    <FileText size={11} />
+                    <span>{stats.count} orçamento{stats.count !== 1 ? 's' : ''}</span>
+                  </div>
+                  {stats.lastDate && (
+                    <div className="flex items-center gap-1 text-xs text-brand-gray-light">
+                      <Clock size={11} />
+                      <span>Último: {formatLastDate(stats.lastDate)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex gap-2 shrink-0">
@@ -111,7 +140,8 @@ export default function Clientes() {
                 <button onClick={() => setDeleteId(c.id)} className="p-2 rounded-lg hover:bg-red-50 transition-colors text-brand-gray-light hover:text-red-600"><Trash2 size={15} /></button>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

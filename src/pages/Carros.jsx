@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Car, Plus, Edit, Trash2, Search } from 'lucide-react'
+import React, { useState, useMemo } from 'react'
+import { Car, Plus, Edit, Trash2, Search, FileText, Clock } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLogger } from '../hooks/useLogger'
@@ -13,7 +13,7 @@ import EmptyState from '../components/ui/EmptyState'
 const empty = () => ({ nome: '', marca: '', cor: '', ano: '', placa: '', clienteId: '' })
 
 export default function Carros() {
-  const { carros, clientes, addCarro, editCarro, dropCarro } = useApp()
+  const { carros, clientes, orcamentos, addCarro, editCarro, dropCarro } = useApp()
   const toast = useToast()
   const logger = useLogger()
   const [search,   setSearch]   = useState('')
@@ -76,6 +76,26 @@ export default function Carros() {
 
   const getCliente = (id) => clientes.find((c) => c.id === id)
 
+  // Orçamentos por carro — calcula uma vez
+  const statsPorCarro = useMemo(() => {
+    const map = {}
+    orcamentos.forEach((o) => {
+      if (!o.carroId) return
+      if (!map[o.carroId]) map[o.carroId] = { count: 0, lastDate: null }
+      map[o.carroId].count++
+      const d = o.createdAt?.toDate ? o.createdAt.toDate() : (o.createdAt ? new Date(o.createdAt) : null)
+      if (d && (!map[o.carroId].lastDate || d > map[o.carroId].lastDate)) {
+        map[o.carroId].lastDate = d
+      }
+    })
+    return map
+  }, [orcamentos])
+
+  const formatLastDate = (d) => {
+    if (!d) return null
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-4">
@@ -96,7 +116,8 @@ export default function Carros() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {filtered.map((c) => {
-            const dono = getCliente(c.clienteId)
+            const dono  = getCliente(c.clienteId)
+            const stats = statsPorCarro[c.id] ?? { count: 0, lastDate: null }
             return (
               <div key={c.id} className="card p-4 flex items-start gap-3">
                 <div className="w-10 h-10 bg-brand-yellow-light rounded-xl flex items-center justify-center shrink-0 mt-0.5">
@@ -111,6 +132,18 @@ export default function Carros() {
                   </div>
                   {c.placa && <span className="inline-block mt-1 text-xs font-mono bg-brand-black text-brand-yellow px-2 py-0.5 rounded">{c.placa}</span>}
                   {dono    && <p className="text-xs text-brand-gray-light mt-1">{dono.nome}</p>}
+                  <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                    <div className="flex items-center gap-1 text-xs text-brand-gray-light">
+                      <FileText size={11} />
+                      <span>{stats.count} orçamento{stats.count !== 1 ? 's' : ''}</span>
+                    </div>
+                    {stats.lastDate && (
+                      <div className="flex items-center gap-1 text-xs text-brand-gray-light">
+                        <Clock size={11} />
+                        <span>Último: {formatLastDate(stats.lastDate)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <button onClick={() => openEdit(c)} className="p-2 rounded-lg hover:bg-brand-gray-border transition-colors text-brand-gray-light hover:text-brand-black"><Edit size={15} /></button>
