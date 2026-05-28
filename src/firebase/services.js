@@ -5,33 +5,42 @@ import {
 } from 'firebase/firestore'
 import { db } from './config'
 
+// ── Timeout helper — evita loading infinito ───────────────────────────────────
+const withTimeout = (promise, ms = 12000, msg = 'Firestore não respondeu. Verifique sua conexão.') =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms)),
+  ])
+
 // ── Generic helpers ──────────────────────────────────────────────────────────
 
 export const getAll = async (col) => {
-  const snap = await getDocs(collection(db, col))
+  const snap = await withTimeout(getDocs(collection(db, col)))
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
 
 export const getById = async (col, id) => {
-  const snap = await getDoc(doc(db, col, id))
+  const snap = await withTimeout(getDoc(doc(db, col, id)))
   return snap.exists() ? { id: snap.id, ...snap.data() } : null
 }
 
 export const create = async (col, data) => {
-  const ref = await addDoc(collection(db, col), {
-    ...data,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
+  const ref = await withTimeout(
+    addDoc(collection(db, col), {
+      ...data,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  )
   return ref.id
 }
 
 export const update = async (col, id, data) => {
-  await updateDoc(doc(db, col, id), { ...data, updatedAt: serverTimestamp() })
+  await withTimeout(updateDoc(doc(db, col, id), { ...data, updatedAt: serverTimestamp() }))
 }
 
 export const remove = async (col, id) => {
-  await deleteDoc(doc(db, col, id))
+  await withTimeout(deleteDoc(doc(db, col, id)))
 }
 
 // ── Clientes ─────────────────────────────────────────────────────────────────

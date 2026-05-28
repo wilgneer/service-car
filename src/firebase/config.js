@@ -1,8 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { initializeFirestore } from 'firebase/firestore'
 
-// Substitua com as credenciais do seu projeto Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyDNrje5Rcey1ch1YILJJfgBPLU-1eGkdzU",
   authDomain: "autocenterfloresta-94820.firebaseapp.com",
@@ -14,5 +13,12 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
-export const db = getFirestore(app)
+
+// long-polling: usa HTTP normal em vez de WebSocket
+// resolve travamentos causados por bloqueio de WebSocket (firewalls, CSP, etc.)
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  useFetchStreams: false,
+})
+
 export default app
