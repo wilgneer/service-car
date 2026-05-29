@@ -50,19 +50,22 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-brand-yellow text-brand-black font-semibold px-4 py-2 rounded-lg hover:bg-brand-yellow-dark transition-colors duration-150 inline-flex items-center gap-2 text-sm;
+    @apply bg-brand-yellow text-brand-black font-semibold px-5 py-2.5 rounded-xl hover:bg-brand-yellow-dark transition-colors duration-150 inline-flex items-center gap-2 text-sm;
   }
   .btn-secondary {
-    @apply bg-transparent border border-brand-gray-border text-brand-black font-medium px-4 py-2 rounded-lg hover:bg-brand-gray-border transition-colors duration-150 inline-flex items-center gap-2 text-sm;
+    @apply bg-transparent border border-brand-gray-border text-brand-black font-medium px-5 py-2.5 rounded-xl hover:bg-brand-gray-border transition-colors duration-150 inline-flex items-center gap-2 text-sm;
   }
   .btn-danger {
-    @apply bg-red-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-150 inline-flex items-center gap-2 text-sm;
+    @apply bg-red-600 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-red-700 transition-colors duration-150 inline-flex items-center gap-2 text-sm;
   }
   .input-field {
-    @apply w-full border border-brand-gray-border rounded-lg px-3 py-2 text-sm text-brand-black bg-white focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition-all duration-150 placeholder:text-[#C0C0C0];
+    @apply w-full border border-brand-gray-border rounded-xl px-3.5 py-2.5 text-sm text-brand-black bg-white focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent transition-all duration-150 placeholder:text-[#BCBCBC];
   }
   .card {
-    @apply bg-white rounded-xl border border-brand-gray-border shadow-sm;
+    @apply bg-white rounded-2xl border border-brand-gray-border shadow-sm;
+  }
+  .section-title {
+    @apply font-bold text-sm text-brand-black tracking-wide flex items-center gap-2;
   }
   .badge-pending {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800;

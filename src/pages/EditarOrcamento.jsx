@@ -155,25 +155,25 @@ export default function EditarOrcamento() {
   }
 
   return (
-    <div className="flex flex-col gap-5 max-w-2xl">
+    <div className="flex flex-col gap-6 max-w-2xl">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate(`/orcamentos/${id}`)} className="p-2 rounded-lg hover:bg-brand-gray-border transition-colors">
+        <button onClick={() => navigate(`/orcamentos/${id}`)} className="p-2.5 rounded-xl hover:bg-brand-gray-border transition-colors">
           <ChevronLeft size={20} />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-brand-black">
+          <h1 className="text-2xl font-bold text-brand-black">
             Editar Orçamento #{String(orcamento.numero).padStart(4, '0')}
           </h1>
-          <p className="text-sm text-brand-gray-light">Altere os dados do orçamento</p>
+          <p className="text-sm text-brand-gray-light mt-0.5">Altere os dados do orçamento</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
         {/* Cliente e Veículo */}
-        <div className="card p-4 flex flex-col gap-4">
-          <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black">Cliente e Veículo</h2>
+        <div className="card p-5 flex flex-col gap-5">
+          <h2 className="font-bold text-sm text-brand-black tracking-wide">Cliente e Veículo</h2>
           <SearchSelect
             label="Cliente"
             items={clientes}
@@ -198,12 +198,14 @@ export default function EditarOrcamento() {
 
         {/* Mecânica: troca de óleo */}
         {isMecanica && (
-          <div className="card p-4 flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <Wrench size={15} className="text-brand-yellow-dark" />
-              <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black">Troca de Óleo</h2>
+          <div className="card p-5 flex flex-col gap-5">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-brand-yellow-light">
+                <Wrench size={14} className="text-brand-yellow-dark" />
+              </div>
+              <h2 className="font-bold text-sm text-brand-black tracking-wide">Troca de Óleo</h2>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <Input
                 label="Última troca — data"
                 type="date"
@@ -231,34 +233,34 @@ export default function EditarOrcamento() {
                 placeholder="Ex: 52000"
               />
             </div>
-            <p className="text-xs text-brand-gray-light">
-              Próxima troca calculada automaticamente (+6 meses / +7.000 km). Pode editar.
+            <p className="text-xs text-brand-gray-light bg-brand-white-off rounded-lg px-3 py-2">
+              Próxima troca calculada automaticamente (+6 meses / +7.000 km). Pode editar livremente.
             </p>
           </div>
         )}
 
         {/* Peças */}
-        <div className="card p-4 flex flex-col gap-3">
+        <div className="card p-5 flex flex-col gap-5">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black">Peças / Produtos</h2>
-            <button type="button" onClick={() => addItem(setPecasItens, emptyPeca)} className="btn-secondary px-2.5 py-1.5 text-xs">
-              <Plus size={13} /> Adicionar
+            <h2 className="font-bold text-sm text-brand-black tracking-wide">Peças / Produtos</h2>
+            <button type="button" onClick={() => addItem(setPecasItens, emptyPeca)} className="btn-secondary px-3 py-1.5 text-xs">
+              <Plus size={13} /> Adicionar peça
             </button>
           </div>
 
           {/* Markup config */}
-          <div className="flex items-center gap-3 bg-brand-yellow-light rounded-lg px-3 py-2">
-            <Info size={14} className="text-brand-yellow-dark shrink-0" />
-            <span className="text-xs text-brand-yellow-dark flex-1">Acréscimo aplicado ao custo das peças</span>
-            <div className="flex items-center gap-1">
+          <div className="flex items-center gap-3 bg-brand-yellow-light rounded-xl px-4 py-3">
+            <Info size={15} className="text-brand-yellow-dark shrink-0" />
+            <span className="text-sm text-brand-yellow-dark flex-1 font-medium">Acréscimo sobre o custo das peças</span>
+            <div className="flex items-center gap-1.5">
               <input
                 type="number"
                 value={markup}
                 onChange={(e) => setMarkup(e.target.value)}
-                className="w-14 text-center border border-brand-yellow-dark rounded px-1 py-0.5 text-xs font-bold bg-white text-brand-black"
+                className="w-16 text-center border-2 border-brand-yellow-dark rounded-lg px-2 py-1.5 text-sm font-bold bg-white text-brand-black focus:outline-none focus:ring-2 focus:ring-brand-yellow"
                 min={0} max={100}
               />
-              <span className="text-xs font-bold text-brand-yellow-dark">%</span>
+              <span className="text-sm font-bold text-brand-yellow-dark">%</span>
             </div>
           </div>
 
@@ -275,16 +277,16 @@ export default function EditarOrcamento() {
             />
           ))}
 
-          <div className="border-t border-brand-gray-border pt-2 flex flex-col gap-1">
+          <div className="bg-brand-white-off rounded-xl px-4 py-3 flex flex-col gap-1.5">
             <div className="flex justify-between text-xs text-brand-gray-light">
-              <span>Subtotal peças (custo)</span>
+              <span>Custo das peças</span>
               <span>{formatCurrency(totals.totalPecasSemMarkup)}</span>
             </div>
             <div className="flex justify-between text-xs text-brand-gray-light">
               <span>Acréscimo {markup}%</span>
-              <span>+ {formatCurrency(totals.totalMarkup)}</span>
+              <span className="text-brand-black">+ {formatCurrency(totals.totalMarkup)}</span>
             </div>
-            <div className="flex justify-between text-sm font-semibold text-brand-black">
+            <div className="flex justify-between text-sm font-bold text-brand-black border-t border-brand-gray-border pt-1.5 mt-0.5">
               <span>Total peças</span>
               <span>{formatCurrency(totals.totalPecas)}</span>
             </div>
@@ -292,11 +294,11 @@ export default function EditarOrcamento() {
         </div>
 
         {/* Serviços */}
-        <div className="card p-4 flex flex-col gap-3">
+        <div className="card p-5 flex flex-col gap-5">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black">Serviços</h2>
-            <button type="button" onClick={() => addItem(setServicosItens, emptyServico)} className="btn-secondary px-2.5 py-1.5 text-xs">
-              <Plus size={13} /> Adicionar
+            <h2 className="font-bold text-sm text-brand-black tracking-wide">Serviços</h2>
+            <button type="button" onClick={() => addItem(setServicosItens, emptyServico)} className="btn-secondary px-3 py-1.5 text-xs">
+              <Plus size={13} /> Adicionar serviço
             </button>
           </div>
           {servicosItens.map((item, i) => (
@@ -309,7 +311,7 @@ export default function EditarOrcamento() {
               canRemove={servicosItens.length > 1}
             />
           ))}
-          <div className="flex justify-between text-sm font-semibold text-brand-black border-t border-brand-gray-border pt-2">
+          <div className="flex justify-between text-sm font-bold text-brand-black bg-brand-white-off rounded-xl px-4 py-3">
             <span>Total serviços</span>
             <span>{formatCurrency(totals.totalMaoDeObra)}</span>
           </div>
@@ -317,67 +319,77 @@ export default function EditarOrcamento() {
 
         {/* Terceiros — apenas Mecânica (e orçamentos antigos sem tipo) */}
         {isMecanica && (
-          <div className="card p-4 flex flex-col gap-3">
-            <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black">Serviços Terceiros</h2>
-            <p className="text-xs text-brand-gray-light -mt-1">Informe o custo do serviço e a margem de lucro desejada</p>
-            {[
-              { key: 'rastreamento',  label: 'Rastreamento' },
-              { key: 'balanceamento', label: 'Balanceamento' },
-              { key: 'retifica',      label: 'Retífica' },
-            ].map(({ key, label }) => {
-              const val   = terceiros[key]
-              const custo = Number(val.custo) || 0
-              const lucro = custo * ((Number(val.margem) || 0) / 100)
-              return (
-                <div key={key} className="border border-brand-gray-border rounded-lg p-3 flex flex-col gap-2 bg-brand-white-off">
-                  <p className="text-sm font-semibold text-brand-black">{label}</p>
-                  <div className="flex gap-2">
-                    <div className="flex flex-col gap-1 flex-1">
-                      <label className="text-xs text-brand-gray-light">Custo (R$)</label>
-                      <input
-                        type="number" step="0.01" min="0"
-                        value={val.custo}
-                        onChange={(e) => setTerceiro(key, 'custo', e.target.value)}
-                        placeholder="0,00"
-                        className="input-field text-right"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1 w-24">
-                      <label className="text-xs text-brand-gray-light">Margem %</label>
-                      <input
-                        type="number" step="1" min="0" max="100"
-                        value={val.margem}
-                        onChange={(e) => setTerceiro(key, 'margem', e.target.value)}
-                        className="input-field text-right"
-                      />
-                    </div>
-                  </div>
-                  {custo > 0 && (
-                    <div className="flex items-center justify-between text-xs bg-brand-yellow-light rounded px-2 py-1.5">
-                      <span className="text-brand-yellow-dark">Custo: {formatCurrency(custo)} + {val.margem}% lucro = </span>
-                      <span className="font-bold text-brand-black">{formatCurrency(custo + lucro)}</span>
-                    </div>
-                  )}
+          <div className="card p-5 flex flex-col gap-5">
+            <div>
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className="p-1.5 rounded-lg bg-purple-50">
+                  <Wrench size={14} className="text-purple-600" />
                 </div>
-              )
-            })}
+                <h2 className="font-bold text-sm text-brand-black tracking-wide">Serviços Terceiros</h2>
+              </div>
+              <p className="text-xs text-brand-gray-light">Informe o custo do serviço e a margem de lucro desejada</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              {[
+                { key: 'rastreamento',  label: 'Rastreamento' },
+                { key: 'balanceamento', label: 'Balanceamento' },
+                { key: 'retifica',      label: 'Retífica' },
+              ].map(({ key, label }) => {
+                const val   = terceiros[key]
+                const custo = Number(val.custo) || 0
+                const lucro = custo * ((Number(val.margem) || 0) / 100)
+                const ativo = custo > 0
+                return (
+                  <div key={key} className={`rounded-2xl border-2 p-4 flex flex-col gap-3 transition-colors ${ativo ? 'border-brand-yellow bg-brand-yellow-light/30' : 'border-brand-gray-border bg-brand-white-off'}`}>
+                    <p className="text-sm font-bold text-brand-black">{label}</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-brand-gray-light uppercase tracking-wide">Custo (R$)</label>
+                        <input type="number" step="0.01" min="0" value={val.custo}
+                          onChange={(e) => setTerceiro(key, 'custo', e.target.value)}
+                          placeholder="0,00" className="input-field text-right" />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-brand-gray-light uppercase tracking-wide">Margem %</label>
+                        <input type="number" step="1" min="0" max="100" value={val.margem}
+                          onChange={(e) => setTerceiro(key, 'margem', e.target.value)}
+                          className="input-field text-right" />
+                      </div>
+                    </div>
+                    {ativo && (
+                      <div className="flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-brand-yellow">
+                        <span className="text-xs text-brand-gray-light">
+                          Custo <span className="font-semibold text-brand-black">{formatCurrency(custo)}</span>
+                          {' + '}{val.margem}% lucro
+                          {lucro > 0 && <span className="text-green-600 font-semibold"> +{formatCurrency(lucro)}</span>}
+                        </span>
+                        <span className="text-sm font-bold text-brand-black">{formatCurrency(custo + lucro)}</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
         {/* Resumo */}
-        <div className="card p-4 flex flex-col gap-2">
-          <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black mb-1">Resumo</h2>
-          <TotalRow label="Peças (com acréscimo)" value={totals.totalPecas} />
-          <TotalRow label="Serviços"              value={totals.totalMaoDeObra} />
-          {totals.t_rastreamento.total  > 0 && <TotalRow label="Rastreamento"  value={totals.t_rastreamento.total}  />}
-          {totals.t_balanceamento.total > 0 && <TotalRow label="Balanceamento" value={totals.t_balanceamento.total} />}
-          {totals.t_retifica.total      > 0 && <TotalRow label="Retífica"      value={totals.t_retifica.total}      />}
-          <div className="border-t border-brand-gray-border pt-2 mt-1">
-            <TotalRow label="Total Geral" value={totals.totalGeral} bold />
+        <div className="card p-5 flex flex-col gap-3">
+          <h2 className="font-bold text-sm text-brand-black tracking-wide">Resumo do Orçamento</h2>
+          <div className="flex flex-col gap-2">
+            <TotalRow label="Peças (com acréscimo)" value={totals.totalPecas} />
+            <TotalRow label="Serviços"              value={totals.totalMaoDeObra} />
+            {totals.t_rastreamento.total  > 0 && <TotalRow label="Rastreamento"  value={totals.t_rastreamento.total}  />}
+            {totals.t_balanceamento.total > 0 && <TotalRow label="Balanceamento" value={totals.t_balanceamento.total} />}
+            {totals.t_retifica.total      > 0 && <TotalRow label="Retífica"      value={totals.t_retifica.total}      />}
+          </div>
+          <div className="bg-brand-black rounded-2xl px-5 py-4 flex items-center justify-between mt-1">
+            <p className="text-white font-semibold text-sm">Total Geral</p>
+            <p className="text-brand-yellow text-2xl font-bold">{formatCurrency(totals.totalGeral)}</p>
           </div>
         </div>
 
-        <div className="flex gap-3 pb-4">
+        <div className="flex gap-3 pb-6">
           <Button variant="secondary" type="button" className="flex-1 justify-center" onClick={() => navigate(`/orcamentos/${id}`)}>
             Cancelar
           </Button>
@@ -395,64 +407,62 @@ export default function EditarOrcamento() {
 function PecaRow({ item, catalog, markup, fornecedores, onChange, onRemove, canRemove }) {
   const custo = (Number(item.valor) || 0) * (Number(item.quantidade) || 1)
   const total = custo * (1 + (Number(markup) || 0) / 100)
-
   return (
-    <div className="border border-brand-gray-border rounded-lg p-3 flex flex-col gap-2 bg-brand-white-off">
+    <div className="border border-brand-gray-border rounded-2xl p-4 flex flex-col gap-3 bg-brand-white-off">
       <div className="flex gap-2">
         <select
           onChange={(e) => {
-            const found = catalog.find((s) => s.id === e.target.value)
-            if (found) {
-              onChange('descricao', found.tipoPeca ?? '')
-              if (found.valor) onChange('valor', String(found.valor))
-            }
+            const f = catalog.find((s) => s.id === e.target.value)
+            if (f) { onChange('descricao', f.tipoPeca ?? ''); if (f.valor) onChange('valor', String(f.valor)) }
           }}
-          className="input-field flex-1 text-xs"
+          className="input-field flex-1 text-sm"
           defaultValue=""
         >
           <option value="">Selecionar do catálogo</option>
           {catalog.map((s) => <option key={s.id} value={s.id}>{s.tipoPeca}</option>)}
         </select>
         {canRemove && (
-          <button type="button" onClick={onRemove} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+          <button type="button" onClick={onRemove} className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
             <Trash2 size={15} />
           </button>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2.5">
         <input value={item.marca}     onChange={(e) => onChange('marca', e.target.value)}     placeholder="Marca (ex: NGK, Bosch...)" className="input-field col-span-2" />
         <input value={item.descricao} onChange={(e) => onChange('descricao', e.target.value)} placeholder="Descrição da peça"         className="input-field col-span-2" />
-        <input type="number" value={item.quantidade} onChange={(e) => onChange('quantidade', e.target.value)} placeholder="Qtd"        min={1}    className="input-field" />
-        <input type="number" value={item.valor}      onChange={(e) => onChange('valor', e.target.value)}      placeholder="Custo unit." step="0.01" className="input-field" />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-brand-gray-light">Quantidade</label>
+          <input type="number" value={item.quantidade} onChange={(e) => onChange('quantidade', e.target.value)} placeholder="1" min={1} className="input-field" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-brand-gray-light">Custo unitário</label>
+          <input type="number" value={item.valor} onChange={(e) => onChange('valor', e.target.value)} placeholder="0,00" step="0.01" className="input-field" />
+        </div>
       </div>
-      <div className="flex items-center justify-between text-xs bg-brand-yellow-light rounded px-2 py-1.5">
-        <span className="text-brand-yellow-dark">Custo: {formatCurrency(custo)} + {markup}% = </span>
-        <span className="font-bold text-brand-black">{formatCurrency(total)}</span>
-      </div>
-      {/* Campos administrativos */}
-      <div className="border-t border-dashed border-brand-gray-border pt-2 flex flex-col gap-2">
-        <p className="text-[10px] font-semibold text-brand-gray-light uppercase tracking-wide">Administrativo — não aparece no orçamento do cliente</p>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="col-span-2">
-            <SearchSelect
-              items={fornecedores}
-              value={item.fornecedorId || ''}
-              onChange={(val) => onChange('fornecedorId', val)}
-              getKey={(f) => f.id}
-              getLabel={(f) => f.nome}
-              getSub={(f) => f.cidade}
-              placeholder="Fornecedor / loja..."
-            />
-          </div>
-          <div className="col-span-2 flex flex-col gap-1">
-            <label className="text-sm font-medium text-brand-black">Data da compra</label>
-            <input
-              type="date"
-              value={item.dataCompra || ''}
-              onChange={(e) => onChange('dataCompra', e.target.value)}
-              className="input-field"
-            />
-          </div>
+      {custo > 0 && (
+        <div className="flex items-center justify-between bg-brand-yellow-light rounded-xl px-3 py-2.5">
+          <span className="text-xs text-brand-yellow-dark font-medium">
+            {formatCurrency(custo)} + {markup}% acréscimo
+          </span>
+          <span className="text-sm font-bold text-brand-black">{formatCurrency(total)}</span>
+        </div>
+      )}
+      <div className="border-t border-dashed border-brand-gray-border pt-3 flex flex-col gap-3">
+        <p className="text-[10px] font-bold text-brand-gray-light uppercase tracking-widest">
+          Administrativo — não aparece no PDF do cliente
+        </p>
+        <SearchSelect
+          items={fornecedores}
+          value={item.fornecedorId || ''}
+          onChange={(val) => onChange('fornecedorId', val)}
+          getKey={(f) => f.id}
+          getLabel={(f) => f.nome}
+          getSub={(f) => f.cidade}
+          placeholder="Fornecedor / loja..."
+        />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-brand-gray-light">Data da compra</label>
+          <input type="date" value={item.dataCompra || ''} onChange={(e) => onChange('dataCompra', e.target.value)} className="input-field" />
         </div>
       </div>
     </div>
@@ -462,45 +472,49 @@ function PecaRow({ item, catalog, markup, fornecedores, onChange, onRemove, canR
 function ServicoRow({ item, catalog, onChange, onRemove, canRemove }) {
   const total = (Number(item.valor) || 0) * (Number(item.quantidade) || 1)
   return (
-    <div className="border border-brand-gray-border rounded-lg p-3 flex flex-col gap-2 bg-brand-white-off">
+    <div className="border border-brand-gray-border rounded-2xl p-4 flex flex-col gap-3 bg-brand-white-off">
       <div className="flex gap-2">
         <select
           onChange={(e) => {
-            const found = catalog.find((s) => s.id === e.target.value)
-            if (found) {
-              onChange('descricao', found.tipoServico ?? found.descricao ?? '')
-              if (found.valor) onChange('valor', String(found.valor))
-            }
+            const f = catalog.find((s) => s.id === e.target.value)
+            if (f) { onChange('descricao', f.tipoServico ?? f.descricao ?? ''); if (f.valor) onChange('valor', String(f.valor)) }
           }}
-          className="input-field flex-1 text-xs"
+          className="input-field flex-1 text-sm"
           defaultValue=""
         >
           <option value="">Selecionar do catálogo</option>
           {catalog.map((s) => <option key={s.id} value={s.id}>{s.tipoServico}</option>)}
         </select>
         {canRemove && (
-          <button type="button" onClick={onRemove} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+          <button type="button" onClick={onRemove} className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
             <Trash2 size={15} />
           </button>
         )}
       </div>
       <input value={item.descricao} onChange={(e) => onChange('descricao', e.target.value)} placeholder="Descrição do serviço" className="input-field" />
-      <div className="flex gap-2">
-        <input type="number" value={item.quantidade} onChange={(e) => onChange('quantidade', e.target.value)} placeholder="Qtd"            min={1}    className="input-field w-20" />
-        <input type="number" value={item.valor}      onChange={(e) => onChange('valor', e.target.value)}      placeholder="Valor unitário" step="0.01" className="input-field flex-1" />
-        <div className="input-field w-28 bg-brand-gray-border text-sm font-medium text-right pointer-events-none">
-          {formatCurrency(total)}
+      <div className="grid grid-cols-3 gap-2.5">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-brand-gray-light">Qtd</label>
+          <input type="number" value={item.quantidade} onChange={(e) => onChange('quantidade', e.target.value)} placeholder="1" min={1} className="input-field" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-brand-gray-light">Valor unit.</label>
+          <input type="number" value={item.valor} onChange={(e) => onChange('valor', e.target.value)} placeholder="0,00" step="0.01" className="input-field" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-brand-gray-light">Total</label>
+          <div className="input-field bg-brand-gray-border font-bold text-right pointer-events-none">{formatCurrency(total)}</div>
         </div>
       </div>
     </div>
   )
 }
 
-function TotalRow({ label, value, bold }) {
+function TotalRow({ label, value }) {
   return (
-    <div className={`flex items-center justify-between ${bold ? 'font-bold text-base' : 'text-sm'}`}>
-      <span className={bold ? 'text-brand-black' : 'text-brand-gray-light'}>{label}</span>
-      <span className={bold ? 'text-brand-black text-lg' : 'text-brand-black'}>{formatCurrency(value)}</span>
+    <div className="flex items-center justify-between py-1.5 border-b border-brand-gray-border last:border-0">
+      <span className="text-sm text-brand-gray-light">{label}</span>
+      <span className="text-sm font-semibold text-brand-black">{formatCurrency(value)}</span>
     </div>
   )
 }
