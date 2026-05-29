@@ -66,7 +66,7 @@ export default function OrcamentoDetalhe() {
   const tipoLabel = orcamento.tipoServico === 'mecanica'
     ? 'Mecânica'
     : orcamento.tipoServico === 'funilaria'
-    ? 'Funilaria & Estética'
+    ? 'Lanternagem e Pintura'
     : null
 
   const changeStatus = async (status, extra, successMsg, logAction) => {
@@ -264,14 +264,14 @@ export default function OrcamentoDetalhe() {
           </>
         )}
         {orcamento.status === 'aprovado' && (
-          <>
-            <Button onClick={() => setConfirm('pagar')} variant="primary" size="sm">
-              <DollarSign size={15} /> Pago
-            </Button>
-            <Button onClick={() => setConfirm('concluir')} variant="secondary" size="sm">
-              <CheckCircle size={15} /> Concluir
-            </Button>
-          </>
+          <Button onClick={() => setConfirm('pagar')} variant="primary" size="sm">
+            <DollarSign size={15} /> Pago
+          </Button>
+        )}
+        {orcamento.status === 'pago' && (
+          <Button onClick={() => setConfirm('concluir')} variant="secondary" size="sm">
+            <CheckCircle size={15} /> Concluir
+          </Button>
         )}
         {canEdit && (
           <Button onClick={() => navigate(`/orcamentos/${id}/editar`)} variant="secondary" size="sm">
@@ -443,9 +443,19 @@ export default function OrcamentoDetalhe() {
 
       {/* ── Total ─────────────────────────────────────────────────────────────── */}
       <div className="card p-4 flex flex-col gap-2">
-        {t.rastreamento > 0 && (
+        {t.t_rastreamento.total  > 0 && (
           <div className="flex justify-between text-sm text-brand-gray-light">
-            <span>Rastreamento</span><span>{formatCurrency(t.rastreamento)}</span>
+            <span>Rastreamento</span><span>{formatCurrency(t.t_rastreamento.total)}</span>
+          </div>
+        )}
+        {t.t_balanceamento.total > 0 && (
+          <div className="flex justify-between text-sm text-brand-gray-light">
+            <span>Balanceamento</span><span>{formatCurrency(t.t_balanceamento.total)}</span>
+          </div>
+        )}
+        {t.t_retifica.total > 0 && (
+          <div className="flex justify-between text-sm text-brand-gray-light">
+            <span>Retífica</span><span>{formatCurrency(t.t_retifica.total)}</span>
           </div>
         )}
         <div className="flex items-center justify-between border-t border-brand-gray-border pt-2">

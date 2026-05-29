@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import {
   TrendingUp, TrendingDown, DollarSign, AlertTriangle,
   Car, Package, Plus, Trash2, Edit, Building2, ChevronRight,
-  ShoppingCart, BarChart2, Calendar,
+  ShoppingCart, BarChart2, Calendar, Wrench,
 } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLogger } from '../hooks/useLogger'
 import * as svc from '../firebase/services'
-import { formatCurrency, formatDate, formatDateLocal } from '../utils/helpers'
+import { formatCurrency, formatDate, formatDateLocal, calcTerceiro } from '../utils/helpers'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
@@ -18,6 +18,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 const TABS = [
   { id: 'entradas',  label: 'Entradas',  icon: TrendingUp    },
   { id: 'saidas',    label: 'Saídas',    icon: TrendingDown  },
+  { id: 'terceiros', label: 'Terceiros', icon: Wrench        },
   { id: 'perdas',    label: 'Perdas',    icon: AlertTriangle },
   { id: 'historico', label: 'Histórico', icon: BarChart2     },
 ]
@@ -32,9 +33,10 @@ export default function Financeiro() {
   const toast  = useToast()
   const logger = useLogger()
 
-  const [tab,        setTab]        = useState('entradas')
-  const [saidaView,  setSaidaView]  = useState('pecas')    // 'pecas' | 'materiais'
-  const [histView,   setHistView]   = useState('mensal')   // 'mensal' | 'anual'
+  const [tab,          setTab]          = useState('entradas')
+  const [saidaView,    setSaidaView]    = useState('pecas')        // 'pecas' | 'materiais'
+  const [histView,     setHistView]     = useState('mensal')       // 'mensal' | 'anual'
+  const [entradasView, setEntradasView] = useState('todos')        // 'todos' | 'mecanica' | 'funilaria'
   const [matModal,   setMatModal]   = useState(null)     // null | { mode, item? }
   const [matForm,    setMatForm]    = useState(emptyMaterial())
   const [saving,     setSaving]     = useState(false)
@@ -125,6 +127,44 @@ export default function Financeiro() {
     })
     return Object.values(map).sort((a, b) => b.year - a.year)
   }, [registrosMensais])
+
+  // ── Terceiros (mecânica) ──────────────────────────────────────────────────────
+  const terceiroItems = useMemo(() => {
+    const items = []
+    orcamentos.forEach((o) => {
+      if (o.tipoServico !== 'mecanica' && o.tipoServico) return
+      const tercs = o.extras?.terceiros
+      if (!tercs) {
+        // fallback legado: extras.rastreamento como número
+        const legR = Number(o.extras?.rastreamento) || 0
+        if (legR > 0) {
+          items.push({ orcamentoId: o.id, numero: o.numero, clienteNome: o.clienteNome ?? '-', tipo: 'Rastreamento', custo: legR, margem: 0, lucro: 0, total: legR })
+        }
+        return
+      }
+      ;[
+        { key: 'rastreamento',  label: 'Rastreamento'  },
+        { key: 'balanceamento', label: 'Balanceamento' },
+        { key: 'retifica',      label: 'Retífica'      },
+      ].forEach(({ key, label }) => {
+        const d = tercs[key]
+        if (!d || !Number(d.custo)) return
+        const r = calcTerceiro(d.custo, d.margem)
+        items.push({ orcamentoId: o.id, numero: o.numero, clienteNome: o.clienteNome ?? '-', tipo: label, custo: r.custo, margem: Number(d.margem) || 0, lucro: r.lucro, total: r.total })
+      })
+    })
+    return items.sort((a, b) => (a.numero ?? 0) - (b.numero ?? 0))
+  }, [orcamentos])
+
+  const totalCustoTerceiros = useMemo(() => terceiroItems.reduce((s, i) => s + i.custo, 0), [terceiroItems])
+  const totalLucroTerceiros = useMemo(() => terceiroItems.reduce((s, i) => s + i.lucro, 0), [terceiroItems])
+
+  // Entradas filtradas por tipo
+  const pagosFiltered = useMemo(() => {
+    if (entradasView === 'mecanica')  return pagos.filter((o) => o.tipoServico === 'mecanica')
+    if (entradasView === 'funilaria') return pagos.filter((o) => o.tipoServico === 'funilaria')
+    return pagos
+  }, [pagos, entradasView])
 
   // ── Materiais CRUD ────────────────────────────────────────────────────────────
 
@@ -228,10 +268,33 @@ export default function Financeiro() {
       {/* ── ENTRADAS ───────────────────────────────────────────────────────── */}
       {tab === 'entradas' && (
         <div className="flex flex-col gap-3">
-          {pagos.length === 0 ? (
+          {/* Sub-tabs por tipo */}
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { id: 'todos',     label: 'Todos' },
+              { id: 'mecanica',  label: 'Mecânica' },
+              { id: 'funilaria', label: 'Lanternagem e Pintura' },
+            ].map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setEntradasView(id)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  entradasView === id
+                    ? 'bg-brand-black text-white'
+                    : 'bg-brand-gray-border text-brand-gray-light hover:text-brand-black'
+                }`}
+              >
+                {label}
+                <span className="ml-1.5 font-bold text-xs opacity-75">
+                  ({(id === 'todos' ? pagos : pagos.filter((o) => o.tipoServico === id)).length})
+                </span>
+              </button>
+            ))}
+          </div>
+          {pagosFiltered.length === 0 ? (
             <EmptyState icon={TrendingUp} title="Nenhum orçamento pago ainda" sub='Aprove um orçamento e clique em "Pago" para registrar a entrada.' />
           ) : (
-            pagos.map((o) => (
+            pagosFiltered.map((o) => (
               <OrcamentoRow key={o.id} o={o} clientes={clientes} carros={carros} navigate={navigate} colorClass="text-green-600" bgClass="bg-green-50" />
             ))
           )}
@@ -338,6 +401,51 @@ export default function Financeiro() {
                   </div>
                 </div>
               )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── TERCEIROS ──────────────────────────────────────────────────────── */}
+      {tab === 'terceiros' && (
+        <div className="flex flex-col gap-3">
+          {terceiroItems.length === 0 ? (
+            <EmptyState icon={Wrench} title="Nenhum serviço terceirizado registrado" sub="Adicione Rastreamento, Balanceamento ou Retífica em orçamentos de Mecânica." />
+          ) : (
+            <>
+              <div className="card overflow-hidden">
+                {/* Header */}
+                <div className="grid grid-cols-5 gap-2 px-4 py-2 bg-brand-white-off border-b border-brand-gray-border text-xs font-semibold text-brand-gray-light uppercase tracking-wide">
+                  <span className="col-span-2">Orçamento / Serviço</span>
+                  <span className="text-right">Custo</span>
+                  <span className="text-right">Margem</span>
+                  <span className="text-right">Lucro</span>
+                </div>
+                {terceiroItems.map((item, i) => (
+                  <div
+                    key={i}
+                    onClick={() => navigate(`/orcamentos/${item.orcamentoId}`)}
+                    className="grid grid-cols-5 gap-2 px-4 py-3 border-b border-brand-gray-border last:border-0 hover:bg-brand-white-off transition-colors cursor-pointer"
+                  >
+                    <div className="col-span-2 min-w-0">
+                      <p className="font-semibold text-brand-black text-sm">#{String(item.numero ?? 0).padStart(4,'0')}</p>
+                      <p className="text-xs text-brand-gray-light truncate">{item.clienteNome} · {item.tipo}</p>
+                    </div>
+                    <p className="text-right text-sm text-brand-gray-light">{formatCurrency(item.custo)}</p>
+                    <p className="text-right text-sm text-brand-gray-light">{item.margem}%</p>
+                    <p className={`text-right text-sm font-bold ${item.lucro > 0 ? 'text-green-600' : 'text-brand-gray-light'}`}>
+                      {formatCurrency(item.lucro)}
+                    </p>
+                  </div>
+                ))}
+                {/* Rodapé */}
+                <div className="grid grid-cols-5 gap-2 px-4 py-3 bg-brand-black rounded-b-xl">
+                  <p className="col-span-2 text-xs font-bold text-white uppercase tracking-wide">Total</p>
+                  <p className="text-right text-sm font-bold text-gray-300">{formatCurrency(totalCustoTerceiros)}</p>
+                  <p className="text-right text-sm text-gray-400">—</p>
+                  <p className="text-right text-sm font-bold text-green-400">{formatCurrency(totalLucroTerceiros)}</p>
+                </div>
+              </div>
             </>
           )}
         </div>

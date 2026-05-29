@@ -5,6 +5,22 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [1.2.0] - 2026-05-29
+
+### Adicionado
+- **Serviços Terceiros na Mecânica**: além de Rastreamento, agora é possível registrar **Balanceamento** e **Retífica** como serviços terceirizados — cada um com campo de custo (R$) e margem de lucro (%, começa em 0)
+- **Financeiro / Terceiros**: nova aba que lista todos os serviços terceirizados de mecânica com custo original, margem% e lucro gerado; total de custo e lucro no rodapé
+- **Financeiro / Entradas**: sub-tabs para filtrar por tipo: Todos, Mecânica e Lanternagem e Pintura
+
+### Alterado
+- **Renomeado**: "Funilaria & Estética" → **"Lanternagem e Pintura"** em toda a interface (seleção de tipo, detalhe, impressão/PDF)
+- **Fluxo de conclusão**: botão "Concluir" foi removido do status `aprovado`; agora o fluxo obrigatório é **Aprovado → Pago → Concluído** (não é possível concluir sem primeiro registrar o pagamento)
+
+### Corrigido
+- `calcTotals` retrocompatível com orçamentos antigos que tinham `extras.rastreamento` como número simples
+
+---
+
 ## [1.1.0] - 2026-05-28
 
 ### Adicionado

@@ -32,8 +32,22 @@ export default function EditarOrcamento() {
   const [pecasItens,    setPecasItens]    = useState(
     orcamento?.itens?.pecas?.length ? orcamento.itens.pecas : [emptyPeca()]
   )
-  const [markup,       setMarkup]       = useState(orcamento?.extras?.markup       ?? 20)
-  const [rastreamento, setRastreamento] = useState(orcamento?.extras?.rastreamento ?? '')
+  const [markup,       setMarkup]       = useState(orcamento?.extras?.markup ?? 20)
+  // Carrega terceiros do formato novo (extras.terceiros) com fallback para legado (extras.rastreamento)
+  const [terceiros,    setTerceiros]    = useState({
+    rastreamento:  {
+      custo:  orcamento?.extras?.terceiros?.rastreamento?.custo  ?? (typeof orcamento?.extras?.rastreamento === 'number' ? orcamento?.extras?.rastreamento : '') ?? '',
+      margem: orcamento?.extras?.terceiros?.rastreamento?.margem ?? 0,
+    },
+    balanceamento: {
+      custo:  orcamento?.extras?.terceiros?.balanceamento?.custo  ?? '',
+      margem: orcamento?.extras?.terceiros?.balanceamento?.margem ?? 0,
+    },
+    retifica: {
+      custo:  orcamento?.extras?.terceiros?.retifica?.custo  ?? '',
+      margem: orcamento?.extras?.terceiros?.retifica?.margem ?? 0,
+    },
+  })
   const [mecanica,     setMecanica]     = useState(orcamento?.mecanica ?? {
     ultimaTrocaData: '', ultimaTrocaKm: '', proximaTrocaData: '', proximaTrocaKm: '',
   })
@@ -47,8 +61,10 @@ export default function EditarOrcamento() {
     return null
   }
 
-  const isMecanica       = orcamento.tipoServico === 'mecanica'
-  const showRastreamento = isMecanica || !orcamento.tipoServico // backward compat para orçamentos antigos
+  const isMecanica = orcamento.tipoServico === 'mecanica' || !orcamento.tipoServico // backward compat
+
+  const setTerceiro = (key, field, value) =>
+    setTerceiros((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
 
   const carrosFiltrados = clienteId
     ? carros.filter((c) => c.clienteId === clienteId)
@@ -57,9 +73,13 @@ export default function EditarOrcamento() {
   const totals = useMemo(() =>
     calcTotals(
       { servicos: servicosItens, pecas: pecasItens },
-      { markup, rastreamento: Number(rastreamento) || 0 }
+      { markup, terceiros: {
+        rastreamento:  { custo: Number(terceiros.rastreamento.custo)  || 0, margem: Number(terceiros.rastreamento.margem)  || 0 },
+        balanceamento: { custo: Number(terceiros.balanceamento.custo) || 0, margem: Number(terceiros.balanceamento.margem) || 0 },
+        retifica:      { custo: Number(terceiros.retifica.custo)      || 0, margem: Number(terceiros.retifica.margem)      || 0 },
+      }}
     ),
-    [servicosItens, pecasItens, markup, rastreamento]
+    [servicosItens, pecasItens, markup, terceiros]
   )
 
   const updateItem = (list, setList, index, field, value) =>
@@ -90,7 +110,14 @@ export default function EditarOrcamento() {
         servicos: servicosItens.filter((i) => i.descricao || i.valor),
         pecas:    pecasItens.filter((i) => i.descricao || i.valor),
       }
-      const extras = { markup: Number(markup) || 20, rastreamento: Number(rastreamento) || 0 }
+      const extras = {
+        markup: Number(markup) || 20,
+        terceiros: {
+          rastreamento:  { custo: Number(terceiros.rastreamento.custo)  || 0, margem: Number(terceiros.rastreamento.margem)  || 0 },
+          balanceamento: { custo: Number(terceiros.balanceamento.custo) || 0, margem: Number(terceiros.balanceamento.margem) || 0 },
+          retifica:      { custo: Number(terceiros.retifica.custo)      || 0, margem: Number(terceiros.retifica.margem)      || 0 },
+        },
+      }
       const t = calcTotals(itens, extras)
 
       const cliente = clientes.find((c) => c.id === clienteId)
@@ -110,7 +137,7 @@ export default function EditarOrcamento() {
         totalPecasSemMarkup: t.totalPecasSemMarkup,
         totalMarkup:         t.totalMarkup,
         totalPecas:          t.totalPecas,
-        rastreamento:        t.rastreamento,
+        totalTerceiros:      t.totalTerceiros,
         totalGeral:          t.totalGeral,
       }
 
@@ -288,21 +315,52 @@ export default function EditarOrcamento() {
           </div>
         </div>
 
-        {/* Rastreamento — apenas Mecânica (e orçamentos antigos sem tipo) */}
-        {showRastreamento && (
-          <div className="card p-4 flex items-center gap-4">
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-brand-black mb-1">Rastreamento</p>
-              <p className="text-xs text-brand-gray-light">Valor do serviço de rastreamento (opcional)</p>
-            </div>
-            <input
-              type="number"
-              value={rastreamento}
-              onChange={(e) => setRastreamento(e.target.value)}
-              placeholder="0,00"
-              step="0.01"
-              className="input-field w-36 text-right"
-            />
+        {/* Terceiros — apenas Mecânica (e orçamentos antigos sem tipo) */}
+        {isMecanica && (
+          <div className="card p-4 flex flex-col gap-3">
+            <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black">Serviços Terceiros</h2>
+            <p className="text-xs text-brand-gray-light -mt-1">Informe o custo do serviço e a margem de lucro desejada</p>
+            {[
+              { key: 'rastreamento',  label: 'Rastreamento' },
+              { key: 'balanceamento', label: 'Balanceamento' },
+              { key: 'retifica',      label: 'Retífica' },
+            ].map(({ key, label }) => {
+              const val   = terceiros[key]
+              const custo = Number(val.custo) || 0
+              const lucro = custo * ((Number(val.margem) || 0) / 100)
+              return (
+                <div key={key} className="border border-brand-gray-border rounded-lg p-3 flex flex-col gap-2 bg-brand-white-off">
+                  <p className="text-sm font-semibold text-brand-black">{label}</p>
+                  <div className="flex gap-2">
+                    <div className="flex flex-col gap-1 flex-1">
+                      <label className="text-xs text-brand-gray-light">Custo (R$)</label>
+                      <input
+                        type="number" step="0.01" min="0"
+                        value={val.custo}
+                        onChange={(e) => setTerceiro(key, 'custo', e.target.value)}
+                        placeholder="0,00"
+                        className="input-field text-right"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 w-24">
+                      <label className="text-xs text-brand-gray-light">Margem %</label>
+                      <input
+                        type="number" step="1" min="0" max="100"
+                        value={val.margem}
+                        onChange={(e) => setTerceiro(key, 'margem', e.target.value)}
+                        className="input-field text-right"
+                      />
+                    </div>
+                  </div>
+                  {custo > 0 && (
+                    <div className="flex items-center justify-between text-xs bg-brand-yellow-light rounded px-2 py-1.5">
+                      <span className="text-brand-yellow-dark">Custo: {formatCurrency(custo)} + {val.margem}% lucro = </span>
+                      <span className="font-bold text-brand-black">{formatCurrency(custo + lucro)}</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
 
@@ -311,7 +369,9 @@ export default function EditarOrcamento() {
           <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black mb-1">Resumo</h2>
           <TotalRow label="Peças (com acréscimo)" value={totals.totalPecas} />
           <TotalRow label="Serviços"              value={totals.totalMaoDeObra} />
-          {totals.rastreamento > 0 && <TotalRow label="Rastreamento" value={totals.rastreamento} />}
+          {totals.t_rastreamento.total  > 0 && <TotalRow label="Rastreamento"  value={totals.t_rastreamento.total}  />}
+          {totals.t_balanceamento.total > 0 && <TotalRow label="Balanceamento" value={totals.t_balanceamento.total} />}
+          {totals.t_retifica.total      > 0 && <TotalRow label="Retífica"      value={totals.t_retifica.total}      />}
           <div className="border-t border-brand-gray-border pt-2 mt-1">
             <TotalRow label="Total Geral" value={totals.totalGeral} bold />
           </div>

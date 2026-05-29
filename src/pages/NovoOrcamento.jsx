@@ -32,8 +32,8 @@ const TIPOS = [
   },
   {
     id:    'funilaria',
-    label: 'Funilaria & Estética',
-    sub:   'Pintura, funilaria, lavagem, polimento...',
+    label: 'Lanternagem e Pintura',
+    sub:   'Pintura, lanternagem, lavagem, polimento...',
     icon:  Palette,
   },
 ]
@@ -54,7 +54,11 @@ export default function NovoOrcamento() {
   const [servicosItens, setServicosItens] = useState([emptyServico()])
   const [pecasItens,    setPecasItens]    = useState([emptyPeca()])
   const [markup,        setMarkup]        = useState(20)
-  const [rastreamento,  setRastreamento]  = useState('')
+  const [terceiros,     setTerceiros]     = useState({
+    rastreamento:  { custo: '', margem: 0 },
+    balanceamento: { custo: '', margem: 0 },
+    retifica:      { custo: '', margem: 0 },
+  })
   const [mecanica,      setMecanica]      = useState(emptyMecanica())
   const [loading,       setLoading]       = useState(false)
   const [errors,        setErrors]        = useState({})
@@ -71,12 +75,19 @@ export default function NovoOrcamento() {
     [carros, clienteId]
   )
 
+  const setTerceiro = (key, field, value) =>
+    setTerceiros((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
+
   const totals = useMemo(() =>
     calcTotals(
       { servicos: servicosItens, pecas: pecasItens },
-      { markup, rastreamento: Number(rastreamento) || 0 }
+      { markup, terceiros: {
+        rastreamento:  { custo: Number(terceiros.rastreamento.custo)  || 0, margem: Number(terceiros.rastreamento.margem)  || 0 },
+        balanceamento: { custo: Number(terceiros.balanceamento.custo) || 0, margem: Number(terceiros.balanceamento.margem) || 0 },
+        retifica:      { custo: Number(terceiros.retifica.custo)      || 0, margem: Number(terceiros.retifica.margem)      || 0 },
+      }}
     ),
-    [servicosItens, pecasItens, markup, rastreamento]
+    [servicosItens, pecasItens, markup, terceiros]
   )
 
   const updateItem = (list, setList, index, field, value) =>
@@ -117,7 +128,14 @@ export default function NovoOrcamento() {
         servicos: servicosItens.filter((i) => i.descricao || i.valor),
         pecas:    pecasItens.filter((i) => i.descricao || i.valor),
       }
-      const extras = { markup: Number(markup) || 20, rastreamento: Number(rastreamento) || 0 }
+      const extras = {
+        markup: Number(markup) || 20,
+        terceiros: {
+          rastreamento:  { custo: Number(terceiros.rastreamento.custo)  || 0, margem: Number(terceiros.rastreamento.margem)  || 0 },
+          balanceamento: { custo: Number(terceiros.balanceamento.custo) || 0, margem: Number(terceiros.balanceamento.margem) || 0 },
+          retifica:      { custo: Number(terceiros.retifica.custo)      || 0, margem: Number(terceiros.retifica.margem)      || 0 },
+        },
+      }
       const t = calcTotals(itens, extras)
       const cliente = clientes.find((c) => c.id === clienteId)
       const carro   = carros.find((c) => c.id === carroId)
@@ -138,7 +156,7 @@ export default function NovoOrcamento() {
         totalPecasSemMarkup: t.totalPecasSemMarkup,
         totalMarkup:         t.totalMarkup,
         totalPecas:          t.totalPecas,
-        rastreamento:        t.rastreamento,
+        totalTerceiros:      t.totalTerceiros,
         totalGeral:          t.totalGeral,
       }
       const newId = await svc.createOrcamento(payload)
@@ -404,21 +422,52 @@ export default function NovoOrcamento() {
           </div>
         </div>
 
-        {/* Rastreamento — apenas Mecânica */}
+        {/* Terceiros — apenas Mecânica */}
         {tipoServico === 'mecanica' && (
-          <div className="card p-4 flex items-center gap-4">
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-brand-black mb-1">Rastreamento</p>
-              <p className="text-xs text-brand-gray-light">Valor do serviço de rastreamento (opcional)</p>
-            </div>
-            <input
-              type="number"
-              value={rastreamento}
-              onChange={(e) => setRastreamento(e.target.value)}
-              placeholder="0,00"
-              step="0.01"
-              className="input-field w-36 text-right"
-            />
+          <div className="card p-4 flex flex-col gap-3">
+            <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black">Serviços Terceiros</h2>
+            <p className="text-xs text-brand-gray-light -mt-1">Informe o custo do serviço e a margem de lucro desejada (começa em 0%)</p>
+            {[
+              { key: 'rastreamento',  label: 'Rastreamento' },
+              { key: 'balanceamento', label: 'Balanceamento' },
+              { key: 'retifica',      label: 'Retífica' },
+            ].map(({ key, label }) => {
+              const val  = terceiros[key]
+              const custo = Number(val.custo) || 0
+              const lucro = custo * ((Number(val.margem) || 0) / 100)
+              return (
+                <div key={key} className="border border-brand-gray-border rounded-lg p-3 flex flex-col gap-2 bg-brand-white-off">
+                  <p className="text-sm font-semibold text-brand-black">{label}</p>
+                  <div className="flex gap-2">
+                    <div className="flex flex-col gap-1 flex-1">
+                      <label className="text-xs text-brand-gray-light">Custo (R$)</label>
+                      <input
+                        type="number" step="0.01" min="0"
+                        value={val.custo}
+                        onChange={(e) => setTerceiro(key, 'custo', e.target.value)}
+                        placeholder="0,00"
+                        className="input-field text-right"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 w-24">
+                      <label className="text-xs text-brand-gray-light">Margem %</label>
+                      <input
+                        type="number" step="1" min="0" max="100"
+                        value={val.margem}
+                        onChange={(e) => setTerceiro(key, 'margem', e.target.value)}
+                        className="input-field text-right"
+                      />
+                    </div>
+                  </div>
+                  {custo > 0 && (
+                    <div className="flex items-center justify-between text-xs bg-brand-yellow-light rounded px-2 py-1.5">
+                      <span className="text-brand-yellow-dark">Custo: {formatCurrency(custo)} + {val.margem}% lucro = </span>
+                      <span className="font-bold text-brand-black">{formatCurrency(custo + lucro)}</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
 
@@ -427,7 +476,9 @@ export default function NovoOrcamento() {
           <h2 className="font-semibold text-sm uppercase tracking-wide text-brand-black mb-1">Resumo</h2>
           <TotalRow label="Peças (com acréscimo)" value={totals.totalPecas} />
           <TotalRow label="Serviços"              value={totals.totalMaoDeObra} />
-          {totals.rastreamento > 0 && <TotalRow label="Rastreamento" value={totals.rastreamento} />}
+          {totals.t_rastreamento.total  > 0 && <TotalRow label="Rastreamento"  value={totals.t_rastreamento.total}  />}
+          {totals.t_balanceamento.total > 0 && <TotalRow label="Balanceamento" value={totals.t_balanceamento.total} />}
+          {totals.t_retifica.total      > 0 && <TotalRow label="Retífica"      value={totals.t_retifica.total}      />}
           <div className="border-t border-brand-gray-border pt-2 mt-1">
             <TotalRow label="Total Geral" value={totals.totalGeral} bold />
           </div>

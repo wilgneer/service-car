@@ -48,6 +48,14 @@ export const formatCep = (cep) => {
   return `${d.slice(0,5)}-${d.slice(5,8)}`
 }
 
+// Calcula custo + lucro de um serviço terceirizado
+export const calcTerceiro = (custo, margem) => {
+  const c = Number(custo)  || 0
+  const m = Number(margem) || 0
+  const lucro = c * (m / 100)
+  return { custo: c, lucro, total: c + lucro }
+}
+
 export const calcTotals = (itens = {}, extras = {}) => {
   const totalMaoDeObra = (itens.servicos ?? []).reduce(
     (s, i) => s + (Number(i.valor) * Number(i.quantidade || 1)), 0
@@ -55,11 +63,28 @@ export const calcTotals = (itens = {}, extras = {}) => {
   const totalPecasSemMarkup = (itens.pecas ?? []).reduce(
     (s, i) => s + (Number(i.valor) * Number(i.quantidade || 1)), 0
   )
-  const markup   = Number(extras.markup ?? 20) / 100
+  const markup      = Number(extras.markup ?? 20) / 100
   const totalMarkup = totalPecasSemMarkup * markup
   const totalPecas  = totalPecasSemMarkup + totalMarkup
-  const rastreamento = Number(extras.rastreamento ?? 0)
-  const totalGeral   = totalMaoDeObra + totalPecas + rastreamento
 
-  return { totalMaoDeObra, totalPecasSemMarkup, totalMarkup, totalPecas, rastreamento, totalGeral }
+  // Terceiros — suporte ao formato novo (extras.terceiros) e legado (extras.rastreamento como número)
+  const tercs = extras.terceiros ?? {}
+  const legacyRastr = typeof extras.rastreamento === 'number' ? extras.rastreamento : 0
+
+  const t_rastreamento  = tercs.rastreamento
+    ? calcTerceiro(tercs.rastreamento.custo,  tercs.rastreamento.margem)
+    : { custo: legacyRastr, lucro: 0, total: legacyRastr }
+  const t_balanceamento = calcTerceiro(tercs.balanceamento?.custo ?? 0, tercs.balanceamento?.margem ?? 0)
+  const t_retifica      = calcTerceiro(tercs.retifica?.custo      ?? 0, tercs.retifica?.margem      ?? 0)
+
+  const totalTerceiros = t_rastreamento.total + t_balanceamento.total + t_retifica.total
+  // campo legado — mantido para compatibilidade com código antigo que lê t.rastreamento
+  const rastreamento   = t_rastreamento.total
+
+  const totalGeral = totalMaoDeObra + totalPecas + totalTerceiros
+
+  return {
+    totalMaoDeObra, totalPecasSemMarkup, totalMarkup, totalPecas,
+    rastreamento, t_rastreamento, t_balanceamento, t_retifica, totalTerceiros, totalGeral,
+  }
 }
