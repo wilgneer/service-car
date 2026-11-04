@@ -112,7 +112,7 @@ export default function EditarOrcamento() {
         pecas:    pecasItens.filter((i) => i.descricao || i.valor),
       }
       const extras = {
-        markup: Number(markup) || 20,
+        markup: Number(markup) ?? 0,
         terceiros: {
           rastreamento:  { custo: Number(terceiros.rastreamento.custo)  || 0, margem: Number(terceiros.rastreamento.margem)  || 0 },
           balanceamento: { custo: Number(terceiros.balanceamento.custo) || 0, margem: Number(terceiros.balanceamento.margem) || 0 },
