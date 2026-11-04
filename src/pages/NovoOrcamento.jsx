@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Trash2, ChevronLeft, UserPlus, Car as CarIcon, Info, Wrench, Palette } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
@@ -52,6 +52,7 @@ export default function NovoOrcamento() {
   const [servicosItens, setServicosItens] = useState([emptyServico()])
   const [pecasItens,    setPecasItens]    = useState([emptyPeca()])
   const [markup,        setMarkup]        = useState(20)
+  const prevMarkupRef = useRef(20)
   const [terceiros,     setTerceiros]     = useState({
     rastreamento:  { custo: '', margem: 0 },
     balanceamento: { custo: '', margem: 0 },
@@ -347,17 +348,37 @@ export default function NovoOrcamento() {
           />
 
           {/* Acréscimo */}
-          <div className="flex items-center gap-3 bg-brand-yellow-light rounded-xl px-4 py-3">
-            <Info size={15} className="text-brand-yellow-dark shrink-0" />
-            <span className="text-sm text-brand-yellow-dark flex-1 font-medium">Acréscimo sobre o custo das peças</span>
-            <div className="flex items-center gap-1.5">
-              <input
-                type="number" value={markup}
-                onChange={(e) => setMarkup(e.target.value)}
-                className="w-16 text-center border-2 border-brand-yellow-dark rounded-lg px-2 py-1.5 text-sm font-bold bg-white text-brand-black focus:outline-none focus:ring-2 focus:ring-brand-yellow"
-                min={0} max={100}
-              />
-              <span className="text-sm font-bold text-brand-yellow-dark">%</span>
+          <div className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-colors ${Number(markup) > 0 ? 'bg-brand-yellow-light' : 'bg-brand-gray-border/50'}`}>
+            <Info size={15} className={`shrink-0 ${Number(markup) > 0 ? 'text-brand-yellow-dark' : 'text-brand-gray-light'}`} />
+            <span className={`text-sm flex-1 font-medium ${Number(markup) > 0 ? 'text-brand-yellow-dark' : 'text-brand-gray-light line-through'}`}>
+              Acréscimo sobre o custo das peças
+            </span>
+            <div className="flex items-center gap-2">
+              {Number(markup) > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number" value={markup}
+                    onChange={(e) => { prevMarkupRef.current = Number(e.target.value) || 20; setMarkup(e.target.value) }}
+                    className="w-16 text-center border-2 border-brand-yellow-dark rounded-lg px-2 py-1.5 text-sm font-bold bg-white text-brand-black focus:outline-none focus:ring-2 focus:ring-brand-yellow"
+                    min={1} max={100}
+                  />
+                  <span className="text-sm font-bold text-brand-yellow-dark">%</span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (Number(markup) > 0) { prevMarkupRef.current = Number(markup); setMarkup(0) }
+                  else setMarkup(prevMarkupRef.current)
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                  Number(markup) > 0
+                    ? 'border-red-300 text-red-600 hover:bg-red-50'
+                    : 'border-brand-yellow-dark text-brand-yellow-dark hover:bg-brand-yellow-light'
+                }`}
+              >
+                {Number(markup) > 0 ? 'Remover' : `Restaurar ${prevMarkupRef.current}%`}
+              </button>
             </div>
           </div>
 
@@ -377,10 +398,12 @@ export default function NovoOrcamento() {
               <span>Custo das peças</span>
               <span>{formatCurrency(totals.totalPecasSemMarkup)}</span>
             </div>
-            <div className="flex justify-between text-xs text-brand-gray-light">
-              <span>Acréscimo {markup}%</span>
-              <span className="text-brand-black">+ {formatCurrency(totals.totalMarkup)}</span>
-            </div>
+            {Number(markup) > 0 && (
+              <div className="flex justify-between text-xs text-brand-gray-light">
+                <span>Acréscimo {markup}%</span>
+                <span className="text-brand-black">+ {formatCurrency(totals.totalMarkup)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm font-bold text-brand-black border-t border-brand-gray-border pt-1.5 mt-0.5">
               <span>Total peças</span>
               <span>{formatCurrency(totals.totalPecas)}</span>
@@ -480,7 +503,7 @@ export default function NovoOrcamento() {
         <div className="card p-5 flex flex-col gap-3">
           <h2 className="font-bold text-sm text-brand-black tracking-wide">Resumo do Orçamento</h2>
           <div className="flex flex-col gap-2">
-            <ResumoRow label="Peças (com acréscimo)" value={totals.totalPecas} />
+            <ResumoRow label={Number(markup) > 0 ? `Peças (+${markup}% acréscimo)` : 'Peças'} value={totals.totalPecas} />
             <ResumoRow label="Serviços"              value={totals.totalMaoDeObra} />
             {totals.t_rastreamento.total  > 0 && <ResumoRow label="Rastreamento"  value={totals.t_rastreamento.total}  />}
             {totals.t_balanceamento.total > 0 && <ResumoRow label="Balanceamento" value={totals.t_balanceamento.total} />}
